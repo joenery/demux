@@ -1,0 +1,6 @@
+#!/bin/bash
+
+LOGFILE=$1
+
+grep -q "Processing completed with 0 errors and 0 warnings." $LOGFILE
+

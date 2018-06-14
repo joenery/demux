@@ -1,0 +1,13 @@
+#!/bin/bash
+
+while getopts ":p" opt; do
+  case $opt in
+     
+    p) RUNFOLDER=$OPTARG;;
+    \?)
+      echo "Invalid option: -$OPTARG" >&2
+      ;;
+  esac
+done
+
+#grep swift_lib_RH_pool /gale/oberon/data1/lims/rh::libraries.DataSheet | awk '{FS = "\t"; print $18 ",," $2 ",,," $19 ",," $20 "," $21 "," $30}'

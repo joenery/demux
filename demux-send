@@ -1,0 +1,11 @@
+#!/bin/bash
+
+RUNFOLDER="180608_K00161_0221_BHVCYYBBXX"
+UNALIGNED="/gale/netapp/seq3/illumina_runs/fastqs/180608_K00161_0221_BHVCYYBBXX_180613120628/"
+LANEBARCODE="/gale/netapp/seq3/illumina_runs/fastqs/180608_K00161_0221_BHVCYYBBXX_180613120628/Reports/html/HVCYYBBXX/all/all/all/laneBarcode.html"
+CC="bawang@salk.edu,castanon@salk.edu"
+RECIPIENT="jnery@salk.edu"
+
+echo "$UNALIGNED" | mailx -s "$RUNFOLDER" -a "$LANEBARCODE" -c "$CC" "$RECIPIENT"
+
+#echo "/gale/netapp/seq3/illumina_runs/fastqs/180608_K00161_0221_BHVCYYBBXX/" | mailx -s "180608_K00161_0221_BHVCYYBBXX" -a "/gale/netapp/seq3/illumina_runs/fastqs/180608_K00161_0221_BHVCYYBBXX/Reports/html/HVCYYBBXX/all/all/all/laneBarcode.html" -c "bawang@salk.edu,castanon@salk.edu" jnery@salk.edu

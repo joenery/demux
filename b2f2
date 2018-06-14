@@ -1,0 +1,134 @@
+#!/bin/bash
+# Expects two arguments: the absolute paths for the run to monitor and 
+# the previous run. The previous run is a run that is in the 
+# process of demultiplexing. This script waits for the previous run to 
+# complete demultiplexing before demultiplexing the current run
+#
+# two files need to be present in the run folder or the script will 
+# terminate: SampleSheet.csv and EmailSheet.csv
+#################
+
+# initialize run to monitor from parameter passed to script
+monitor_run=${1-"./"}
+if [ $monitor_run != "./" ]; then
+    monitor_run=`echo $monitor_run | sed 's/\/*$//'`
+else
+    monitor_run=`pwd`
+fi
+
+# initialize previous run from parameter passed to script
+wait_on_run=${2-"/data/illumina_runs/data10/140109_HAL_1294_BD2DGNACXX"}
+wait_on_run=`echo $wait_on_run | sed 's/\/*$//'`
+
+mail_to="jnery@salk.edu"
+UNALIGNED="Unaligned"
+SAMPLESHEET="SampleSheet.csv"
+EMAILSHEET="EmailSheet.csv"
+RTACOMPLETE="RTAComplete.txt"
+BASECALLS="Data/Intensities/BaseCalls"
+STATS="Basecall_Stats*/Demultiplex*"
+ONE_HR="3600"
+HALF_HR="1800"
+FIVE_MIN="300"
+monitor_rta_detect="$monitor_run/$RTACOMPLETE"
+wait_on_stats_detect="$wait_on_run/Unaligned/$STATS"
+monitor_stats_detect="$monitor_run/$UNALIGNED/$STATS"
+monitor_basecalls="$monitor_run/$BASECALLS"
+monitor_samplesheet="$monitor_run/$SAMPLESHEET"
+monitor_emails="$monitor_run/$EMAILSHEET"
+monitor_unaligned_detect="$monitor_run/$UNALIGNED"
+monitor_lane_barcode="$monitor_unaligned_detect/Reports/html/*XX*/all/all/all/laneBarcode.html"
+
+# configureBclToFastq options
+options="--sample-sheet $monitor_samplesheet -o $monitor_unaligned_detect --use-bases-mask y*,I6n*"
+
+# use --tiles s_[1-8] to specify which lanes to demultiplex or s_1 for only lane 1
+
+# configureBclToFastq additional options
+# options="--mismatches 1 --ignore-missing-bcl --ignore-missing-stats --ignore-missing-control"
+
+function currentTime()
+{
+    date "+%Y-%m-%d %T"
+}
+
+clear
+
+# check for SampleSheet.csv
+echo "[$(currentTime)] Checking for $monitor_samplesheet..."
+if [ -e $monitor_samplesheet ]; then
+    echo "[$(currentTime)] $SAMPLESHEET found."
+else
+    echo "[$(currentTime)] $SAMPLESHEET not found. Exiting script."
+    exit 1
+fi
+
+# check for emails.txt to CC upon completion
+echo "[$(currentTime)] Checking for $EMAILSHEET..."
+
+if [ -e $monitor_emails ]; then
+    echo "[$(currentTime)] $EMAILSHEET found."
+    cc=`cat $monitor_emails`
+else 
+    echo "[$(currentTime)] $EMAILSHEET not found. Exiting script."
+    exit 1
+fi
+
+# check if demultiplexing was performed previously on this run
+echo "[$(currentTime)] Checking for Unaligned folder..."
+if [ -e $monitor_unaligned_detect ]; then
+    echo "[$(currentTime)] $monitor_unaligned_detect found. Rename it and rerun."
+    exit 1
+else
+    echo "[$(currentTime)] $monitor_unaligned_detect not found"
+fi
+
+# check for Demultiplex_Stats from previous run to verify bcl to fastq completion
+#echo "[$(currentTime)] Checking if previous run, $wait_on_run has completed bcl to fastq..."
+#until [ -f $wait_on_stats_detect ]; 
+#do
+#    echo "[$(currentTime)] $wait_on_run in progress. Waiting 30 minutes for next attempt."
+#    sleep "$HALF_HR"
+#done
+#echo "[$(currentTime)] Bcl to fastq complete for previous run."
+
+# check for RTAcomplete to verify sequencing complete
+echo "[$(currentTime)] Checking for RTAComplete.txt..."
+until [ -f $monitor_rta_detect ]; do
+    echo "[$(currentTime)] $monitor_rta_detect not found. Waiting 30 minutes for next attempt..."
+    sleep "$HALF_HR"
+done
+echo "[$(currentTime)] $monitor_rta_detect found. Sequencing complete."
+
+# invoke bcl to fastq script
+#cd $monitor_basecalls
+echo "[$(currentTime)] Starting bcltofastq."
+bcl_out=nohup_`date "+%Y-%m-%d-%H-%M-%S"`.out
+command_line="nohup bcl2fastq $options"
+mailx -a $monitor_samplesheet -s "$monitor_run"  "$mail_to" <<< "[$(currentTime)] $command_line."
+start_secs=`date +%s`
+$command_line &> $bcl_out
+
+# check for Unaligned directory
+#cd $monitor_unaligned_detect
+#echo "[$(currentTime)] Starting make."
+#nohup make -j 8
+
+# check for fastq completion
+#if [ -e $monitor_stats_detect ]; then
+#  echo "[$(currentTime)] $monitor_stats_detect found. BCL to FASTQ complete"
+completion_time=`stat -c%y $monitor_lane_barcode | cut -d'.' -f1`
+end_secs=`date +%s`
+elapsed_secs="$((end_secs - start_secs))"
+#  h="$(( secs / 3600 ))"
+#  m="$(( ( secs % 3600 ) / 60 ))"
+#  s="$(( secs % 60 ))"
+#  elapsed_time=`printf "%02d:%02d:%02d\n" $h $m $s`
+#mailx -a $monitor_stats_detect -s "$monitor_run" -c "$cc" "$mail_to" <<< "[$completion_time] Fastq for $monitor_run ready. $elapsed_time"
+mailx -a $monitor_lane_barcode -s "$monitor_run" -c "$cc" "$mail_to" <<< "[$completion_time] Fastq for $monitor_unaligned_detect ready. $elapsed_sec"
+exit 0
+#else
+#  echo "[$(currentTime)] Basecall Stats not found."
+#  mailx -s "$monitor_run" "$mail_to" <<< "[$(currentTime)] Bcl complete. Basecall Stats not found."
+#  exit 0
+#fi
