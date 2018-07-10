@@ -1,0 +1,28 @@
+#!/bin/bash
+OUTPUT_PARENT="/gale/netapp/seq2/illumina_runs"
+LOG_PARENT="/gale/netapp/seq2/illumina_runs/.demux_logs"
+
+timestamp="$(date "+%y%m%d%H%M%S")"
+run_path="$(pwd)"
+run_name="$(basename $run_path)"
+run_name_ts="${run_name}_$timestamp"
+output_path="$OUTPUT_PARENT/$run_name_ts"
+log_name="$run_name_ts.txt"
+log_path="$LOG_PARENT/$log_name"
+samplesheet_name="SampleSheet.csv"
+
+while getopts ":s:" opt; do
+  case $opt in
+    s) samplesheet_name=$OPTARG;;
+  esac
+done
+
+samplesheet="$run_path/$samplesheet_name"
+
+bcl2fastq_command_line="nohup bcl2fastq \
+  -R $run_path \
+  --sample-sheet $samplesheet \
+  -o $output_path \
+  &> $log_path"
+
+echo $bcl2fastq_command_line

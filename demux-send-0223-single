@@ -1,12 +1,12 @@
 #!/bin/bash
 
-CC="rhenley@salk.edu"
-#CC=""
-RUNFOLDER="180629_M00412_0145_000000000-G1VB9"
-UNALIGNED="/gale/netapp/seq2/illumina_runs/180629_M00412_0145_000000000-G1VB9_180710110452"
+RUNFOLDER="180621_K00161_0223_AHVL2HBBXX"
+UNALIGNED="/gale/netapp/seq2/illumina_runs/180621_K00161_0223_AHVL2HBBXX_180702183037"
 FLOWCELL=$(echo $UNALIGNED | awk -F "_" '{print $5}')
-FLOWCELL=${FLOWCELL:0}
+FLOWCELL=${FLOWCELL:1}
 LANEBARCODE="$UNALIGNED/Reports/html/$FLOWCELL/all/all/all/laneBarcode.html"
+CC="mzander@salk.edu,castanon@salk.edu,hsong@salk.edu,mhariharan@salk.edu,barragan@salk.edu"
+#CC=""
 RECIPIENT="jnery@salk.edu"
 
 echo "$UNALIGNED" | mailx -s "$RUNFOLDER" -a "$LANEBARCODE" -c "$CC" "$RECIPIENT"
