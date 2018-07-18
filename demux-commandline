@@ -1,4 +1,21 @@
 #!/bin/bash
+#
+#Generates the command line for Demultiplexing a run 
+#using the given SampleSheet.csv
+#
+#It must be invoked in the run folder
+#
+#The fastqs will be written to a directory in the 
+#OUTPUT_PARENT directory, which is defined below. 
+#It is assigned the directory name of the run folder 
+#with a timestamp suffix.
+#
+#The nohup is redirected to a log file in the LOG_PARENT
+#directory defined below and assigned a filename as 
+#described previously.
+#
+
+#Constants
 OUTPUT_PARENT="/gale/netapp/seq2/illumina_runs"
 LOG_PARENT="/gale/netapp/seq2/illumina_runs/.demux_logs"
 
@@ -9,15 +26,40 @@ run_name_ts="${run_name}_$timestamp"
 output_path="$OUTPUT_PARENT/$run_name_ts"
 log_name="$run_name_ts.txt"
 log_path="$LOG_PARENT/$log_name"
-samplesheet_name="SampleSheet.csv"
 
-while getopts ":s:" opt; do
+usage() {
+echo "eg, demux-commandline -s /gale/netapp/seq2/illumina_runs/.samplesheets/180709_K00161_0224_AHVMNJBBXX/SampleSheet_180709_K00161_0224.csv"
+echo "-s, path to samplesheet file"
+echo "-h, this help message"
+}
+
+while getopts ":s:h" opt; do
   case $opt in
-    s) samplesheet_name=$OPTARG;;
+    s) 
+      samplesheet=$OPTARG
+      ;;
+    h) 
+      usage
+      exit
+      ;;
+    \?)
+      echo "Invalid option: -$OPTARG"
+      usage
+      exit
+      ;;
   esac
 done
 
-samplesheet="$run_path/$samplesheet_name"
+if [ -z "$samplesheet" ] ; then
+  echo "Please supply samplesheet filename."
+  usage
+  exit 1
+fi
+
+if [ ! -f $samplesheet ]; then
+  echo "Error! $samplesheet not found!"
+  exit 1
+fi
 
 bcl2fastq_command_line="nohup bcl2fastq \
   -R $run_path \
