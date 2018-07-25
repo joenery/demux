@@ -1,15 +1,24 @@
 #!/bin/bash
 
-#CC="cluo@salk.edu,castanon@salk.edu"
-CC=""
-RUNFOLDER="180709_K00161_0224_AHVMNJBBXX"
-UNALIGNED="/gale/netapp/seq2/illumina_runs/180709_K00161_0224_AHVMNJBBXX_180718131851"
-FLOWCELL=$(echo $UNALIGNED | awk -F "_" '{print $5}')
-FLOWCELL=${FLOWCELL:1}
+run_path="$(pwd)"
+run_name="$(basename $run_path)"
+RUNFOLDER="$run_name"
+UNALIGNED="$run_path"
+INSTRUMENT=$(echo $run_name | awk -F"_" '{print $2}')
+FLOWCELL=$(echo $UNALIGNED | awk -F"_" '{print $5}')
+if [ ! $INSTRUMENT == "M00412" ]; then
+  FLOWCELL=${FLOWCELL:1}
+fi
 LANEBARCODE="$UNALIGNED/Reports/html/$FLOWCELL/all/all/all/laneBarcode.html"
 RECIPIENT="jnery@salk.edu"
 
-echo "$UNALIGNED" | mailx -s "$RUNFOLDER" -a "$LANEBARCODE" -c "$CC" "$RECIPIENT"
-#echo "$UNALIGNED" | mailx -s "$RUNFOLDER" -a "$LANEBARCODE" "$RECIPIENT"
+projects="$(lanebarcode-projects -l $LANEBARCODE)"
+samples="$(lanebarcode-samples -l $LANEBARCODE)"
 
-#echo "/gale/netapp/seq3/illumina_runs/fastqs/180608_K00161_0221_BHVCYYBBXX/" | mailx -s "180608_K00161_0221_BHVCYYBBXX" -a "/gale/netapp/seq3/illumina_runs/fastqs/180608_K00161_0221_BHVCYYBBXX/Reports/html/HVCYYBBXX/all/all/all/laneBarcode.html" -c "bawang@salk.edu,castanon@salk.edu" jnery@salk.edu
+(echo -e "Demux complete. Path to fastq:" ; \
+  echo -e "$UNALIGNED\n" ; \
+  echo -e "Samples:" ; \
+  echo -e "$samples\n" ; \
+  echo -e "Projects:" ; \
+  echo -e "$projects\n") \
+| mailx -s "$RUNFOLDER" -a "$LANEBARCODE" -c "$CC" "$RECIPIENT"
