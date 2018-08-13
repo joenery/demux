@@ -1,0 +1,69 @@
+#!/bin/bash
+
+#if [[ $# -eq 0 ]] ; then
+#  RUN_PATH="$(pwd)"
+#else
+#  RUN_PATH="$(readlink -f $1)"
+#fi
+
+RUN_PATH="$(pwd)"
+RUN_NAME="$(basename $RUN_PATH)"
+RUNFOLDER="$RUN_NAME"
+UNALIGNED="$RUN_PATH"
+BCLS="$(echo $UNALIGNED | awk '{print substr($0, 1, length($0)-13)}')"
+INSTRUMENT=$(echo $RUN_NAME | awk -F"_" '{print $2}')
+FLOWCELL=$(echo $UNALIGNED | awk -F"_" '{print $5}')
+if [ ! $INSTRUMENT == "M00412" ]; then
+  FLOWCELL=${FLOWCELL:1}
+fi
+LANEBARCODE="$UNALIGNED/Reports/html/$FLOWCELL/all/all/all/laneBarcode.html"
+RECIPIENT="jnery@salk.edu"
+
+projects="$(lanebarcode-projects -l $LANEBARCODE)"
+samples="$(lanebarcode-samples -l $LANEBARCODE)"
+
+usage() {
+echo "Usage: demux-notify -b /gale/netapp/seq2/illumina_runs/180709_K00161_0224_AHVMNJBBXX"
+echo "-f	path to fastqs. pwd is default if -f is not specified"
+echo "-b	path to bcls"
+echo "-h	this help message"
+}
+
+while getopts ":f:b:h" opt; do
+  case $opt in
+    f)RUN_PATH=$OPTARG
+      ;;
+    b)
+      BCLS=$OPTARG
+      ;;
+    h)
+      usage
+      exit 1
+      ;;
+    \?)
+      echo "Invalid option: -$OPTARG"
+      usage
+      exit 1
+      ;;
+  esac
+done
+
+if [ -d "$BCLS" ]; then
+  (echo -e "Demux complete. Path to bcl:" ; \
+    echo -e "$BCLS\n" ; \
+    echo -e "Path to fastq:" ; \
+    echo -e "$UNALIGNED\n" ; \
+    echo -e "Samples:" ; \
+    echo -e "$samples\n" ; \
+    echo -e "Projects:" ; \
+    echo -e "$projects\n") \
+  | mailx -s "$RUNFOLDER" -a "$LANEBARCODE" -c "$CC" "$RECIPIENT"
+else
+  (echo -e "Demux complete. Path to fastq:" ; \
+    echo -e "$UNALIGNED\n" ; \
+    echo -e "Samples:" ; \
+    echo -e "$samples\n" ; \
+    echo -e "Projects:" ; \
+    echo -e "$projects\n") \
+  | mailx -s "$RUNFOLDER" -a "$LANEBARCODE" -c "$CC" "$RECIPIENT"
+fi

@@ -18,6 +18,7 @@
 #Constants
 OUTPUT_PARENT="/gale/netapp/seq2/illumina_runs"
 SAMPLESHEET_PARENT="/gale/netapp/seq2/illumina_runs/.samplesheets"
+DEFAULT_SAMPLESHEET_NAME="SampleSheet.csv"
 LOG_PARENT="/gale/netapp/seq2/illumina_runs/.demux_logs"
 QSUB_PARENT="/gale/netapp/seq2/illumina_runs/.qsub"
 RTA_COMPLETE="RTAComplete.txt"
@@ -31,45 +32,72 @@ log_name="$run_name_ts.txt"
 log_path="$LOG_PARENT/$log_name"
 
 usage() {
-echo "Usage: demux-commandline -s SampleSheet.csv -m n"
-echo "-s, samplesheet filename in default samplesheets directory: /gale/netapp/seq2/illumina_runs/.samplesheets"
-echo "-O, additional bcl2fastq options enclosed in quotes"
-echo "-h, this help message"
+echo "Usage: demux-commandline -s SampleSheet.csv"
+echo "-s	samplesheet filename in default samplesheets directory: "
+echo "	  /gale/netapp/seq2/illumina_runs/.samplesheets/<run folder>"
+echo "-O	additional bcl2fastq options enclosed in quotes"
+echo "-h	this help message"
 }
 
 while getopts ":s:O:h" opt; do
   case $opt in
     s) 
-      SAMPLESHEET_PATH=$OPTARG
+      samplesheet_arg=$OPTARG
       ;;
     O)
       bclopts=$OPTARG
       ;;
     h) 
       usage
-      exit
+      exit 1
       ;;
     \?)
       echo "Invalid option: -$OPTARG"
       usage
-      exit
+      exit 1
       ;;
   esac
 done
 
-if [ ! -f "$run_path/$RTA_COMPLETE" ] ; then
+if [ ! -f "$run_path/$RTA_COMPLETE" ]; then
   echo "This does not appear to be a valid run directory!"
   exit 1
 fi
 
-if [ ! -f $samplesheet ]; then
-  echo "Error! $samplesheet not found!"
-  exit 1
+#if a sample sheet arg isn't given, try to find it using the default name
+if [ -z $samplesheet_arg ]; then 
+  samplesheet_path="$SAMPLESHEET_PARENT/$run_name/$DEFAULT_SAMPLESHEET_NAME"
+  if [ ! -f $samplesheet_path ]; then
+    samplesheet_path="$run_path/$DEFAULT_SAMPLESHEET_NAME"
+    if [ ! -f $samplesheet_path ]; then
+      echo "Error! Cannot find sample sheet."
+      usage
+      exit 1
+    fi
+  fi
+#if a sample sheet arg is given, then try to find it
+else
+  if [ $(dirname $samplesheet_arg) == . ]; then 
+    samplesheet_path="$(pwd)/$samplesheet_arg"
+  else
+    samplesheet_path="$samplesheet_arg"
+  fi
+  if [ ! -f $samplesheet_path ]; then
+    samplesheet_path="$SAMPLESHEET_PARENT/$run_name/$samplesheet_arg"
+    if [ ! -f $samplesheet_path ]; then
+      samplesheet_path="$run_path/$samplesheet_arg"
+      if [ ! -f $samplesheet_path ]; then
+        echo "Error! Cannot find given sample sheet."
+        usage
+        exit 1
+      fi
+    fi
+  fi
 fi
 
 bcl2fastq_command_line="nohup bcl2fastq \
   -R $run_path \
-  --sample-sheet $SAMPLESHEET_PATH \
+  --sample-sheet $samplesheet_path \
   -o $output_path \
   $bclopts \
   &> $log_path"

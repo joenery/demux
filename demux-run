@@ -1,36 +1,14 @@
 #!/bin/bash
 #
-#Generates the command line for Demultiplexing a run 
-#using the given SampleSheet.csv
-#
-#It must be invoked in the run folder
-#
-#The fastqs will be written to a directory in the 
-#OUTPUT_PARENT directory, which is defined below. 
-#It is assigned the directory name of the run folder 
-#with a timestamp suffix.
-#
-#The nohup is redirected to a log file in the LOG_PARENT
-#directory defined below and assigned a filename as 
-#described previously.
-#
 
-#Constants
-OUTPUT_PARENT="/gale/netapp/seq2/illumina_runs"
-SAMPLESHEET_PATH="/gale/netapp/seq2/illumina_runs/.samplesheets"
-LOG_PARENT="/gale/netapp/seq2/illumina_runs/.demux_logs"
 QSUB_PARENT="/gale/netapp/seq2/illumina_runs/.qsub"
-
-run_path="$(pwd)"
-run_name="$(basename $run_path)"
-log_name="$run_name_ts.txt"
-log_path="$LOG_PARENT/$log_name"
+BCL_PATH_FILE="bcl_path.txt"
 
 usage() {
-echo "Usage: demux-run -s /gale/netapp/seq2/illumina_runs/.samplesheets/180709_K00161_0224_AHVMNJBBXX/SampleSheet_180709_K00161_0224.csv -m n"
-echo "-s, path to samplesheet file"
-echo "-m, miseq (y/n)"
-echo "-h, this help message"
+echo "Usage: demux-run -s /gale/netapp/seq2/illumina_runs/.samplesheets/180709_K00161_0224_AHVMNJBBXX/SampleSheet_180709_K00161_0224.csv"
+echo "-s	path to samplesheet file"
+echo "-O	additional bcl2fastq options"
+echo "-h	display this help message"
 }
 
 while getopts ":s:O:h" opt; do
@@ -55,6 +33,7 @@ done
 
 echo "bclopts: $bclopts"
 
+#generate bcl2fastq command line
 bcl2fastq_command_line=$(demux-commandline -s "$SAMPLESHEET_PATH" -O "$bclopts")
 
 #check demux-commandline script exit status
@@ -63,7 +42,16 @@ if [ $(echo $?) -eq 1 ] ; then
   exit 1
 fi
 
-#extract info from command line for qsub
+#parse command line
+bcl_path=$(echo $bcl2fastq_command_line \
+  | awk '{print $4}')
+
+samplesheet_path=$(echo $bcl2fastq_command_line \
+  | awk '{print $6}'
+
+fastq_path=$(echo $bcl2fastq_command_line \
+  | awk '{print $8}')
+
 instrument=$(echo $bcl2fastq_command_line \
   | awk -F"/" '{print $NF}' \
   | awk -F"_" '{print $2}')
@@ -95,6 +83,14 @@ cd $qsub_path
 
 echo "Submitting job to queue"
 2q
+
+#wait for the fastq directory to be created
+until [ -d $fastq_path ]; do 
+  sleep 60 ; 
+done ; 
+
+#write a file containing bcl_path
+echo $bcl_path >> $fastq_path/$BCL_PATH_FILE
 
 node=$(qstat | grep "${qsub_dir:0:10}")
 
