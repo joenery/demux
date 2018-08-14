@@ -47,10 +47,13 @@ bcl_path=$(echo $bcl2fastq_command_line \
   | awk '{print $4}')
 
 samplesheet_path=$(echo $bcl2fastq_command_line \
-  | awk '{print $6}'
+  | awk '{print $6}')
 
 fastq_path=$(echo $bcl2fastq_command_line \
   | awk '{print $8}')
+
+log_path=$(echo $bcl2fastq_command_line \
+  | awk 'END{print $NF}')
 
 instrument=$(echo $bcl2fastq_command_line \
   | awk -F"/" '{print $NF}' \
@@ -76,25 +79,42 @@ qsub_path="$QSUB_PARENT/$qsub_dir"
 
 mkdir $qsub_path
 
-#write command line for submitting to queue
-echo $bcl2fastq_command_line > $qsub_path/commands
-
 cd $qsub_path
+
+#source ~/.bash_profile in wrapper script
+echo "source /gale/netapp/home/seq/.bash_profile" > $qsub_path/pipeline
+
+#write bcl2fastq_command_line to pipeline wrapper script
+echo "$bcl2fastq_command_line" >> $qsub_path/pipeline
+
+#write demux-completion-notification to wrapper script
+#demux-completion-notification -f /gale/netapp/seq2/illumina_runs/180727_K00161_0227_BHW2MVBBXX_180730171425 -b /gale/netapp/seq2/illumina_runs/180727_K00161_0227_BHW2MVBBXX
+#echo "bash /gale/netapp/home/seq/bin/demux/demux-completion-notification -f $fastq_path -b $bcl_path" >> $qsub_path/pipeline
+echo "demux-completion-notification -f $fastq_path -b $bcl_path" >> $qsub_path/pipeline
+
+#write qsub commands script that calls pipeline
+echo "bash $qsub_path/pipeline" > $qsub_path/commands
 
 echo "Submitting job to queue"
 2q
 
 #wait for the fastq directory to be created
 until [ -d $fastq_path ]; do 
+  echo "Waiting 60 seconds for creation of $fastq_path."
   sleep 60 ; 
 done ; 
 
-#write a file containing bcl_path
+echo "Writing config files"
+
+#write a file containing bcl_path to the fastq directory
 echo $bcl_path >> $fastq_path/$BCL_PATH_FILE
 
-node=$(qstat | grep "${qsub_dir:0:10}")
+#copy samplesheet to fastq directory
+cp $samplesheet_path $fastq_path
 
-echo "$node" > $qsub_path/node.txt
+node=$(qstat | grep "${qsub_dir:0:10}")
+#write a file containing the qsub node to the fastq dir
+echo "$node" > $fastq_path/node.txt
 echo $bcl2fastq_command_line
 echo "$qsub_path"
 exit 0

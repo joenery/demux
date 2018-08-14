@@ -7,20 +7,20 @@
 #fi
 
 RUN_PATH="$(pwd)"
-RUN_NAME="$(basename $RUN_PATH)"
-RUNFOLDER="$RUN_NAME"
-UNALIGNED="$RUN_PATH"
-BCLS="$(echo $UNALIGNED | awk '{print substr($0, 1, length($0)-13)}')"
-INSTRUMENT=$(echo $RUN_NAME | awk -F"_" '{print $2}')
-FLOWCELL=$(echo $UNALIGNED | awk -F"_" '{print $5}')
-if [ ! $INSTRUMENT == "M00412" ]; then
-  FLOWCELL=${FLOWCELL:1}
-fi
-LANEBARCODE="$UNALIGNED/Reports/html/$FLOWCELL/all/all/all/laneBarcode.html"
-RECIPIENT="jnery@salk.edu"
+#RUN_NAME="$(basename $RUN_PATH)"
+#RUNFOLDER="$RUN_NAME"
+#UNALIGNED="$RUN_PATH"
+#BCLS="$(echo $UNALIGNED | awk '{print substr($0, 1, length($0)-13)}')"
+#INSTRUMENT=$(echo $RUN_NAME | awk -F"_" '{print $2}')
+#FLOWCELL=$(echo $UNALIGNED | awk -F"_" '{print $5}')
+#if [ ! $INSTRUMENT == "M00412" ]; then
+#  FLOWCELL=${FLOWCELL:1}
+#fi
+#LANEBARCODE="$UNALIGNED/Reports/html/$FLOWCELL/all/all/all/laneBarcode.html"
+#RECIPIENT="jnery@salk.edu"
 
-projects="$(lanebarcode-projects -l $LANEBARCODE)"
-samples="$(lanebarcode-samples -l $LANEBARCODE)"
+#projects="$(lanebarcode-projects -l $LANEBARCODE)"
+#samples="$(lanebarcode-samples -l $LANEBARCODE)"
 
 usage() {
 echo "Usage: demux-notify -b /gale/netapp/seq2/illumina_runs/180709_K00161_0224_AHVMNJBBXX"
@@ -47,6 +47,21 @@ while getopts ":f:b:h" opt; do
       ;;
   esac
 done
+
+RUN_NAME="$(basename $RUN_PATH)"
+RUNFOLDER="$RUN_NAME"
+UNALIGNED="$RUN_PATH"
+BCLS="$(echo $UNALIGNED | awk '{print substr($0, 1, length($0)-13)}')"
+INSTRUMENT=$(echo $RUN_NAME | awk -F"_" '{print $2}')
+FLOWCELL=$(echo $UNALIGNED | awk -F"_" '{print $5}')
+if [ ! $INSTRUMENT == "M00412" ]; then
+  FLOWCELL=${FLOWCELL:1}
+fi
+LANEBARCODE="$UNALIGNED/Reports/html/$FLOWCELL/all/all/all/laneBarcode.html"
+RECIPIENT="jnery@salk.edu"
+
+projects="$(lanebarcode-projects -l $LANEBARCODE)"
+samples="$(lanebarcode-samples -l $LANEBARCODE)"
 
 if [ -d "$BCLS" ]; then
   (echo -e "Demux complete. Path to bcl:" ; \

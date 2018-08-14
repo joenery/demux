@@ -1,0 +1,14 @@
+#180727_K00161_0227_BHW2MVBBXX_180801130638/Reports/html/HW2MVBBXX/all/all/all/laneBarcode.html
+
+HTML="Reports/html/*XX/all/all/all/laneBarcode.html"
+RUNS="/gale/netapp/seq2/illumina_runs"
+COMPMON="/gale/netapp/seq2/illumina_runs/.compmon"
+for i in $COMPMON/* ; do
+  runname="$(basenanme $i)"
+  flowcell="$(awk -F_ '{print $4}')"
+  echo $flowcell
+  #ls -l "$RUNS/$runname/$HTML"
+done
+
+
+
