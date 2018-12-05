@@ -16,7 +16,7 @@
 #
 
 #Constants
-OUTPUT_PARENT="/gale/netapp/seq2/illumina_runs"
+OUTPUT_PARENT="/gale/oberon/data11"
 SAMPLESHEET_PARENT="/gale/netapp/seq2/illumina_runs/.samplesheets"
 LOG_PARENT="/gale/netapp/seq2/illumina_runs/.demux_logs"
 QSUB_PARENT="/gale/netapp/seq2/illumina_runs/.qsub"
@@ -74,6 +74,7 @@ fi
 
 
 bcl2fastq_command_line="cellranger mkfastq \
+  --ignore-dual-index \
   --run $run_path \
   --id $flowcell_ts \
   --csv $samplesheet \

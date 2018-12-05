@@ -1,11 +1,12 @@
 #!/bin/bash
 #
-
 QSUB_PARENT="/gale/netapp/seq2/illumina_runs/.qsub"
 BCL_PATH_FILE="bcl_path.txt"
+SAMPLESHEET_NAME="SampleSheet.csv"
+RECIPIENT="jnery@salk.edu"
 
 usage() {
-echo "Usage: demux-run -s /gale/netapp/seq2/illumina_runs/.samplesheets/180709_K00161_0224_AHVMNJBBXX/SampleSheet_180709_K00161_0224.csv"
+echo "Usage: demux-run -s /gale/netapp/seq2/illumina_runs/.samplesheets/180709_K00161_0224_AHVMNJBBXX/SampleSheet_180709_K00161_0224.csv -O \"-p 16\""
 echo "-s	path to samplesheet file"
 echo "-O	additional bcl2fastq options"
 echo "-h	display this help message"
@@ -41,6 +42,8 @@ if [ $(echo $?) -eq 1 ] ; then
   echo "$bcl2fastq_command_line"
   exit 1
 fi
+
+echo $bcl2fastq_command_line
 
 #parse command line
 bcl_path=$(echo $bcl2fastq_command_line \
@@ -81,25 +84,27 @@ mkdir $qsub_path
 
 cd $qsub_path
 
+echo $qsub_path
+
 #source ~/.bash_profile in wrapper script
-echo "source /gale/netapp/home/seq/.bash_profile" > $qsub_path/pipeline
+#echo "source /gale/netapp/home/seq/.bash_profile" > $qsub_path/pipeline
 
-#write bcl2fastq_command_line to pipeline wrapper script
-echo "$bcl2fastq_command_line" >> $qsub_path/pipeline
-
-#write demux-completion-notification to wrapper script
-#demux-completion-notification -f /gale/netapp/seq2/illumina_runs/180727_K00161_0227_BHW2MVBBXX_180730171425 -b /gale/netapp/seq2/illumina_runs/180727_K00161_0227_BHW2MVBBXX
-#echo "bash /gale/netapp/home/seq/bin/demux/demux-completion-notification -f $fastq_path -b $bcl_path" >> $qsub_path/pipeline
-echo "demux-completion-notification -f $fastq_path -b $bcl_path" >> $qsub_path/pipeline
+#write bcl2fastq_command_line to commands script
+echo "$bcl2fastq_command_line" >> $qsub_path/commands
 
 #write qsub commands script that calls pipeline
-echo "bash $qsub_path/pipeline" > $qsub_path/commands
+#echo "bash $qsub_path/pipeline" > $qsub_path/commands
+
+#which bcl2fastq
 
 echo "Submitting job to queue"
 2q
 
+qstat
+
 #wait for the fastq directory to be created
 until [ -d $fastq_path ]; do 
+  echo "*********** DO NOT PRESS CTRL-C! **************"
   echo "Waiting 60 seconds for creation of $fastq_path."
   sleep 60 ; 
 done ; 
@@ -110,11 +115,25 @@ echo "Writing config files"
 echo $bcl_path >> $fastq_path/$BCL_PATH_FILE
 
 #copy samplesheet to fastq directory
-cp $samplesheet_path $fastq_path
+cp $samplesheet_path $fastq_path/$SAMPLESHEET_NAME
+
+#write bcl2fastq_command_line to Unaligned directory
+echo "$bcl2fastq_command_line" >> $fastq_path/command_line.txt
+
+#copy xml files to fastq directory
+[ -f $bcl_path/RunInfo.xml ] && cp $bcl_path/RunInfo.xml $fastq_path/RunInfo.xml
+[ -f $bcl_path/RunParameters.xml ] && cp $bcl_path/RunParameters.xml $fastq_path/RunParameters.xml
+[ -f $bcl_path/runParameters.xml ] && cp $bcl_path/runParameters.xml $fastq_path/runParameters.xml 
 
 node=$(qstat | grep "${qsub_dir:0:10}")
 #write a file containing the qsub node to the fastq dir
 echo "$node" > $fastq_path/node.txt
 echo $bcl2fastq_command_line
-echo "$qsub_path"
+
+{
+  echo -e "Demux Started. Command-line invocation:" ; \
+  echo -e "$bcl2fastq_command_line\n" ; \
+} | mailx -s "$bcl_path" "$RECIPIENT"
+
+
 exit 0

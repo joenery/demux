@@ -1,0 +1,40 @@
+#!/bin/bash
+
+ILLUMINA_RUNS="/gale/netapp/seq2/illumina_runs"
+
+DEMUX_MON_PATH="$ILLUMINA_RUNS/.demux_mon"
+
+DEMUXED_PATH="$ILLUMINA_RUNS/.demuxed"
+
+for i in $DEMUX_MON_PATH/* ; do 
+
+  echo $i
+ 
+  folder=$(echo $i | awk -F "/" '{print $NF}')
+
+  echo $folder
+
+  if [ $folder = "*" ] ; then
+
+    echo "$DEMUX_MON_PATH is empty" 
+
+    exit 1
+
+  fi
+
+exit
+ 
+  if [ -f $ILLUMINA_RUNS/$folder/Reports/html/*XX/all/all/all/laneBarcode.html ] ; then
+
+    cd $ILLUMINA_RUNS/$folder
+
+    demux-completion-notification
+
+    mv $DEMUX_MON_PATH/$folder $DEMUXED_PATH/
+
+  else ls $ILLUMINA_RUNS/$folder/Reports/html/*XX/all/all/all/laneBarcode.html
+
+  fi
+
+done
+

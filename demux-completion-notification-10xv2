@@ -48,7 +48,7 @@ SAMPLESHEET="$UNALIGNED_PATH/SampleSheet.csv"
 
 COMMANDLINE="$UNALIGNED_PATH/command_line.txt"
 
-RUN_PATH=$(cat $COMMANDLINE | awk '{print $4}')
+RUN_PATH=$(cat $COMMANDLINE | awk '{print $5}')
 
 STATS="$UNALIGNED_PATH/Stats/Stats.json"
 
@@ -77,7 +77,7 @@ commandline="$(cat $COMMANDLINE)"
   echo -e "$samples\n" ; \
   echo -e "Projects:" ; \
   echo -e "$projects\n" ; \
-  echo -e "Command-line invocation:" ; \
+  echo -e "Command line:" ; \
   echo -e "$commandline\n" ; \
   echo -e "Path to bcl:" ; \
   echo -e "$RUN_PATH\n"

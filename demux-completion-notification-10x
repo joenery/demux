@@ -9,9 +9,12 @@ echo "-r	path run folder containing bcl files"
 echo "-h	this help message"
 }
 
-while getopts ":f:h" opt; do
+while getopts ":f:b:h" opt; do
   case $opt in
     f)UNALIGNED_PATH=$OPTARG
+      ;;
+    b)
+      RUN_PATH=$OPTARG
       ;;
     h)
       usage
@@ -26,59 +29,51 @@ while getopts ":f:h" opt; do
 done
 
 UNALIGNED_DIR="$(basename $UNALIGNED_PATH)"
-
 #if no argument (empty string) is given for the run directory, assume the run 
 #directory has the same name as the unaligned directory without the timestamp
-#if [ -z "$name" ] ; then
-#  RUN_PATH="$(echo $UNALIGNED_PATH | awk '{print substr($0, 1, length($0)-13)}')"
-#fi
-
+if [ -z "$name" ] ; then
+  RUN_PATH="$(echo $UNALIGNED_PATH | awk '{print substr($0, 1, length($0)-13)}')"
+fi
 INSTRUMENT=$(echo $UNALIGNED_DIR | awk -F"_" '{print $2}')
-
 FLOWCELL=$(echo $UNALIGNED_DIR | awk -F"_" '{print $4}')
-
 #if the run isn't a MiSeq run remove the side id from flowcell id
 if [ ! $INSTRUMENT == "M00412" ]; then
   FLOWCELL=${FLOWCELL:1}
 fi
-
 LANEBARCODE="$UNALIGNED_PATH/Reports/html/$FLOWCELL/all/all/all/laneBarcode.html"
-
 SAMPLESHEET="$UNALIGNED_PATH/SampleSheet.csv"
-
 COMMANDLINE="$UNALIGNED_PATH/command_line.txt"
-
-RUN_PATH=$(cat $COMMANDLINE | awk '{print $4}')
-
 STATS="$UNALIGNED_PATH/Stats/Stats.json"
-
 #cat Stats.json | jq '.ReadInfosForLanes[0].ReadInfos[0].NumCycles'
-
-RUNINFO="$UNALIGNED_PATH/RunInfo.xml"
-
-RUNPARAMETERS="$UNALIGNED_PATH/runParameters.xml"
-
-[ -f $RUNPARAMETERS ] || RUNPARAMETERS="$UNALIGNED_PATH/RunParameters.xml"
 
 RECIPIENT="jnery@salk.edu"
 
 projects="$(lanebarcode-projects -l $LANEBARCODE)"
-
-projects="$(lanebarcode-projects -l $LANEBARCODE)"
-
 samples="$(lanebarcode-samples -l $LANEBARCODE)"
-
 commandline="$(cat $COMMANDLINE)"
 
-{
-  echo -e "Demux complete. Path to fastq:" ; \
-  echo -e "$UNALIGNED_PATH\n" ; \
-  echo -e "Samples:" ; \
-  echo -e "$samples\n" ; \
-  echo -e "Projects:" ; \
-  echo -e "$projects\n" ; \
-  echo -e "Command-line invocation:" ; \
-  echo -e "$commandline\n" ; \
-  echo -e "Path to bcl:" ; \
-  echo -e "$RUN_PATH\n"
-} | mailx -s "$UNALIGNED_DIR" -a "$LANEBARCODE" -a "$SAMPLESHEET" -a "$RUNINFO" -a "$RUNPARAMETERS" -c "$CC" "$RECIPIENT"
+if [ -d "$RUN_PATH" ]; then
+  (echo -e "Demux complete. Path to fastq:" ; \
+   echo -e "$UNALIGNED_PATH\n" ; \
+   echo -e "Samples:" ; \
+   echo -e "$samples\n" ; \
+   echo -e "Projects:" ; \
+   echo -e "$projects\n" ; \
+   echo -e "Command line:" ; \
+   echo -e "$commandline\n" ; \
+   echo -e "Path to bcl:" ; \
+   echo -e "$RUN_PATH\n") \
+  | mailx -s "$UNALIGNED_DIR" -a "$LANEBARCODE" -c "$CC" -a "$SAMPLESHEET" -c "$CC" "$RECIPIENT"  
+
+else
+  (echo -e "Demux complete. Path to fastq:" ; \
+   echo -e "$UNALIGNED_PATH\n" ; \
+   echo -e "Samples:" ; \
+   echo -e "$samples\n" ; \
+   echo -e "Projects:" ; \
+   echo -e "$projects\n" ; \
+   echo -e "Command line:" ; \
+   echo -e "$commandline\n") \
+  | mailx -s "$UNALIGNED_DIR" -a "$LANEBARCODE" -c "$CC" -a "$SAMPLESHEET" -c "$CC" "$RECIPIENT"
+
+fi

@@ -17,7 +17,7 @@
 
 #Constants
 #OUTPUT_PARENT="/gale/netapp/seq2/illumina_runs"
-OUTPUT_PARENT="/gale/oberon/data11"
+OUTPUT_PARENT="/gale/raidix/rdx-3/illumina_runs"
 SAMPLESHEET_PATH="/gale/netapp/seq2/illumina_runs/.samplesheets"
 LOG_PARENT="/gale/netapp/seq2/illumina_runs/.demux_logs"
 QSUB_PARENT="/gale/netapp/seq2/illumina_runs/.qsub"
@@ -55,9 +55,7 @@ done
 
 echo "bclopts: $bclopts"
 
-#bcl2fastq_command_line=$(demux-commandline-10x -s "$SAMPLESHEET_PATH" -O "$bclopts")
-
-bcl2fastq_command_line=$(demux-commandline-10x)
+bcl2fastq_command_line=$(demux-commandline-10x -s "$SAMPLESHEET_PATH" -O "$bclopts")
 
 #check demux-commandline script exit status
 if [ $(echo $?) -eq 1 ] ; then
