@@ -16,6 +16,8 @@
 #
 
 #Constants
+NOVASEQ_STRING="A00280"
+NOVA_PROCS="8"
 #OUTPUT_PARENT="/gale/netapp/seq2/illumina_runs"
 OUTPUT_PARENT="/gale/oberon/data11"
 SAMPLESHEET_PARENT="/gale/netapp/seq2/illumina_runs/.samplesheets"
@@ -32,21 +34,28 @@ output_path="$OUTPUT_PARENT/$run_name_ts"
 log_name="$run_name_ts.txt"
 log_path="$LOG_PARENT/$log_name"
 
+flowcell="$(echo $run_name | awk -F_ '{print $NF}')"
+flowcell_ts="${flowcell}_$timestamp"
+
 usage() {
 echo "Usage: demux-commandline -s SampleSheet.csv"
 echo "-s	samplesheet filename in default samplesheets directory: "
 echo "	  /gale/netapp/seq2/illumina_runs/.samplesheets/<run folder>"
 echo "-O	additional bcl2fastq options enclosed in quotes"
+echo "-c	run cellranger mkfastq"
 echo "-h	this help message"
 }
 
-while getopts ":s:O:h" opt; do
+while getopts ":s:O:ch" opt; do
   case $opt in
     s) 
       samplesheet_arg=$OPTARG
       ;;
     O)
       bclopts=$OPTARG
+      ;;
+    c)
+      mkfastq="y"
       ;;
     h) 
       usage
@@ -96,12 +105,27 @@ else
   fi
 fi
 
-bcl2fastq_command_line="nohup bcl2fastq \
-  -R $run_path \
-  --sample-sheet $samplesheet_path \
-  -o $output_path \
-  $bclopts \
-  &> $log_path"
+if [[ $flowcell == *"$NOVASEQ_STRING"* ]]; then procopt="-p $NOVA_PROCS";fi
+
+case "$mkfastq" in
+  y)
+    bcl2fastq_command_line="cellranger mkfastq \
+      --run $run_path \
+      --csv $samplesheet_path \
+      --output-dir $output_path \
+      --id $flowcell_ts \
+      &> $log_path" 
+    ;;
+  n | *)
+    bcl2fastq_command_line="nohup bcl2fastq \
+      -R $run_path \
+      --sample-sheet $samplesheet_path \
+      -o $output_path \
+      $procopt \
+      $bclopts \
+      &> $log_path"
+    ;;
+esac
 
 echo $bcl2fastq_command_line
 exit 0
