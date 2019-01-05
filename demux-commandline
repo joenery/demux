@@ -105,7 +105,8 @@ else
   fi
 fi
 
-if [[ $flowcell == *"$NOVASEQ_STRING"* ]]; then procopt="-p $NOVA_PROCS";fi
+#if it's a novaseq run set -p option
+if [[ $run_name == *"$NOVASEQ_STRING"* ]]; then proc_opt="-p $NOVA_PROCS";fi
 
 case "$mkfastq" in
   y)
@@ -121,7 +122,7 @@ case "$mkfastq" in
       -R $run_path \
       --sample-sheet $samplesheet_path \
       -o $output_path \
-      $procopt \
+      $proc_opt \
       $bclopts \
       &> $log_path"
     ;;
