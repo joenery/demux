@@ -1,14 +1,38 @@
-#180727_K00161_0227_BHW2MVBBXX_180801130638/Reports/html/HW2MVBBXX/all/all/all/laneBarcode.html
+#!/bin/bash
+#
 
-HTML="Reports/html/*XX/all/all/all/laneBarcode.html"
-RUNS="/gale/netapp/seq2/illumina_runs"
-COMPMON="/gale/netapp/seq2/illumina_runs/.compmon"
-for i in $COMPMON/* ; do
-  runname="$(basenanme $i)"
-  flowcell="$(awk -F_ '{print $4}')"
-  echo $flowcell
-  #ls -l "$RUNS/$runname/$HTML"
+
+log_name="190227_A00280_0041_AHHW5WDSXX_190301074926.txt"
+
+WAIT_TIME="60"
+LOG_PARENT="/gale/netapp/seq2/illumina_runs/.demux_logs"
+
+FASTQ_PATH="/gale/netapp/seq2/illumina_runs/190227_A00280_0041_AHHW5WDSXX_190301074926"
+
+function date_time(){
+  echo $(date "+%Y-%m-%d %H:%M:%S");
+}
+
+
+until grep -q "0 errors and 0 warnings." $LOG_PARENT/$log_name; do 
+#  echo "Processing not complete. Waiting..."
+  sleep $WAIT_TIME
 done
+
+echo "$(date_time) Processing completed with 0 errors and 0 warnings. Sending Notification email"
+
+demux-completion-notification-v2 -f $FASTQ_PATH 
+
+
+#HTML="Reports/html/*XX/all/all/all/laneBarcode.html"
+#RUNS="/gale/netapp/seq2/illumina_runs"
+#COMPMON="/gale/netapp/seq2/illumina_runs/.compmon"
+#for i in $COMPMON/* ; do
+#  runname="$(basenanme $i)"
+#  flowcell="$(awk -F_ '{print $4}')"
+#  echo $flowcell
+#  #ls -l "$RUNS/$runname/$HTML"
+#done
 
 
 

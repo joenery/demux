@@ -1,0 +1,19 @@
+#!/bin/bash
+# deletes Thumbnail_Images directory
+# input: path to Thumbnail_Images 
+
+src=$1
+
+function date_time(){
+  echo $(date "+%Y-%m-%d %H:%M:%S");
+}
+
+#check if thumbnail directory is present
+if [ -d "$src" ]; then 
+  echo "$(date_time) INFO: "$src" found. Deleting Thumbnails..." 
+  rm -vrf "$src"
+  echo "$(date_time) INFO: "$src" deletion completed successfully."
+else 
+  echo "$(date_time) INFO: "$src" does not exist."
+fi
+

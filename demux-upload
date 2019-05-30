@@ -129,8 +129,6 @@ instrument="$(echo $bcl2fastq_command_line \
   | awk -F"/" '{print $NF}' \
   | awk -F"_" '{print $2}')"
 
-run_dir=:"$(echo $bcl_path | awk -F/ '{print $NF}')"
-
 samplesheet_columns="$(tail -n 1 "$samplesheet_path" | awk -F, '{print NF}')"
 
 #nohup bcl2fastq -R /gale/netapp/seq2/illumina_runs/190110_K00161_0255_AH33L2BBXY --sample-sheet /gale/netapp/seq2/illumina_runs/.samplesheets/190110_K00161_0255_AH33L2BBXY/SampleSheet.csv -o /gale/oberon/data1/190110_K00161_0255_AH33L2BBXY_190122155335 -p 4 -r 4 -w 4 &> /gale/netapp/seq2/illumina_runs/.demux_logs/190110_K00161_0255_AH33L2BBXY_190122155335.txt
@@ -139,12 +137,10 @@ demux_log_file="$(echo $bcl2fastq_command_line | awk -F"/" '{print $NF}')"
 #190110_K00161_0255_AH33L2BBXY_190122155335.txt
 
 if [ $instrument == "M00412" ]; then
-  flowcell="$(echo ${demux_log_file: -22:5})"  
   qsub_dir="$(echo ${demux_log_file: -22:18})"
   year="$(echo ${demux_log_file: -51:2})"
   sleeptime=60
 else
-  flowcell="$(echo ${demux_log_file: -26:9})"
   qsub_dir="$(echo ${demux_log_file: -26:22})"
   year="$(echo ${demux_log_file: -46:2})"
   sleeptime=900
@@ -157,25 +153,12 @@ versity_qsub_dir=$qsub_dir"_versity"
 
 versity_qsub_path="$QSUB_VERSITY_PARENT/$versity_qsub_dir"
 
-versity_bcl_qsub_dir=$flowcell"_versity"
-
-versity_bcl_qsub_path="$QSUB_VERSITY_PARENT/$versity_bcl_qsub_dir"
-
 year="20"$year
  
 VERSITY_PARENT=$VERSITY/$year/
 
 #rsync -avsz /gale/netapp/scratch2/illumina_runs/180214_K00161_0195_BHNYVTBBXX /gale/versity/seq/illumina_runs/2018
 rsync_command_line="rsync -avsz $fastq_path $VERSITY_PARENT"
-
-rsync_bcl_command_line="rsync -avsz $bcl_path $VERSITY_PARENT"
-
-versity_run_dir="$VERSITY_PARENT/$run_folder"
-
-echo "TEST"
-
-exit
-
 
 echo "$(date_time) INFO: Making qsub directory: $qsub_path"
 
@@ -279,25 +262,6 @@ if echo $log_message | grep -q $COMPLETESTR ; then
   echo "$(date_time) INFO: Sending demux completion notification."
 
   demux-completion-notification -f $fastq_path
-
-  #if bcls (run_directory) are not on versity rsync
-
-  if [[ ! -d "$versity_run_dir" ]] ; then
-
-    #prepare for versity rsync
-    echo "$(date_time) INFO: Making versity qsub directory: $versity_bcl_qsub_path"
-
-    mkdir $versity_bcl_qsub_path
-
-    cd $versity_bcl_qsub_path
-
-
-
-
-
-
-
-
 
   #prepare for versity rsync
   echo "$(date_time) INFO: Making versity qsub directory: $versity_qsub_path"

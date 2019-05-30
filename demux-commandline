@@ -17,9 +17,10 @@
 
 #Constants
 NOVASEQ_STRING="A00280"
-NOVA_PROCS="8"
+MISEQ_STRING="M00412"
+OUTPUT_PARENT="/gale/raidix/rdx-3/illumina_runs"
 #OUTPUT_PARENT="/gale/netapp/seq2/illumina_runs"
-OUTPUT_PARENT="/gale/oberon/data11"
+#OUTPUT_PARENT="/gale/oberon/data11"
 SAMPLESHEET_PARENT="/gale/netapp/seq2/illumina_runs/.samplesheets"
 DEFAULT_SAMPLESHEET_NAME="SampleSheet.csv"
 LOG_PARENT="/gale/netapp/seq2/illumina_runs/.demux_logs"
@@ -34,28 +35,55 @@ output_path="$OUTPUT_PARENT/$run_name_ts"
 log_name="$run_name_ts.txt"
 log_path="$LOG_PARENT/$log_name"
 
-flowcell="$(echo $run_name | awk -F_ '{print $NF}')"
+instrument=$(echo $run_name | cut -f2 -d_)
+if [ "$instrument" = $MISEQ_STRING ] ; then
+  flowcell="$(echo $run_name | awk -F- '{print $NF}')"
+else
+  flowcell="$(echo $run_name | awk -F_ '{print $NF}')"
+  flowcell="$(echo ${flowcell:1})"
+fi
+
 flowcell_ts="${flowcell}_$timestamp"
+
+proc_threads=4
+read_threads=4
+write_threads=4
 
 usage() {
 echo "Usage: demux-commandline -s SampleSheet.csv"
 echo "-s	samplesheet filename in default samplesheets directory: "
 echo "	  /gale/netapp/seq2/illumina_runs/.samplesheets/<run folder>"
+echo "-p        number of processing threads"
+echo "-r        number of reading threads"
+echo "-w        number of writing threads"
 echo "-O	additional bcl2fastq options enclosed in quotes"
-echo "-c	run cellranger mkfastq"
+echo "-m	select cellranger mkfastq script. options:"
+echo "            a: cellranger-atac"
+echo "            c: cellranger"
+echo "            d: cellranger-dna"
+echo "            eg, \"-ma\" or \"-m a\" for cellranger-atac"
 echo "-h	this help message"
 }
 
-while getopts ":s:O:ch" opt; do
+while getopts ":s:p:r:w:O:m:h" opt; do
   case $opt in
     s) 
       samplesheet_arg=$OPTARG
       ;;
+    p)
+      proc_threads=$OPTARG
+      ;;
+    r)
+      read_threads=$OPTARG
+      ;;
+    w)
+      write_threads=$OPTARG
+      ;;
     O)
       bclopts=$OPTARG
       ;;
-    c)
-      mkfastq="y"
+    m)
+      mkfastq=$OPTARG
       ;;
     h) 
       usage
@@ -69,6 +97,7 @@ while getopts ":s:O:ch" opt; do
   esac
 done
 
+#check if it's a valid run directory
 if [ ! -f "$run_path/$RTA_COMPLETE" ]; then
   echo "This does not appear to be a valid run directory!"
   exit 1
@@ -105,28 +134,41 @@ else
   fi
 fi
 
-#if it's a novaseq run set -p option
-if [[ $run_name == *"$NOVASEQ_STRING"* ]]; then proc_opt="-p $NOVA_PROCS";fi
-
-case "$mkfastq" in
-  y)
-    bcl2fastq_command_line="cellranger mkfastq \
-      --run $run_path \
-      --csv $samplesheet_path \
-      --output-dir $output_path \
-      --id $flowcell_ts \
-      &> $log_path" 
+#select mkfastq command
+if [ ! -z ${mkfastq+x} ]; then
+case $mkfastq in
+  a)cellranger_version="cellranger-atac"
     ;;
-  n | *)
-    bcl2fastq_command_line="nohup bcl2fastq \
-      -R $run_path \
-      --sample-sheet $samplesheet_path \
-      -o $output_path \
-      $proc_opt \
-      $bclopts \
-      &> $log_path"
+  c)cellranger_version="cellranger"
+    ;;
+  d)cellranger_version="cellranger-dna"
     ;;
 esac
+#else
+#  echo "Invalid cellranger option: $(echo $mkfastq)"
+#  echo "Please provide either -ma, -mc, -md"
+#  exit 1
+fi
+
+if [ ! -z ${mkfastq+x} ]; then
+  bcl2fastq_command_line="$(echo "$cellranger_version" mkfastq) \
+    --run $run_path \
+    --csv $samplesheet_path \
+    --output-dir $output_path \
+    --id $flowcell_ts \
+    $bclopts \
+    &> $log_path" 
+else 
+  bcl2fastq_command_line="nohup bcl2fastq \
+    -R $run_path \
+    --sample-sheet $samplesheet_path \
+    -o $output_path \
+    -p $proc_threads \
+    -r $read_threads \
+    -w $write_threads\
+    $bclopts \
+    &> $log_path"
+fi
 
 echo $bcl2fastq_command_line
 exit 0

@@ -1,39 +1,8 @@
 #!/bin/bash
 #
-QSUB_PARENT="/gale/netapp/seq2/illumina_runs/.qsub"
-QSUB_COMMANDS_SCRIPT="commands"
-FASTQ_COMMAND_FILE="command_line.txt"
-BCL_PATH_FILE="bcl_path.txt"
-SAMPLESHEET_NAME="SampleSheet.csv"
-RECIPIENT="jnery@salk.edu"
-CC="jnery@salk.edu"
-COMMANDS2SUBMIT="commands2submit"
-QUEUECONFIG=~/bin/queue/qbcl.cfg
-VERSITY="/gale/versity/seq/illumina_runs"
-QSUB_VERSITY_PARENT="/gale/netapp/seq2/illumina_runs/.qsub_versity"
-COMPLETESTR="complete"
-STOPSTR10X="successfully"
-STOPSTR="error"
-
-#i5 index should be treated as a read and not an index so use Y instead of I
-#for atacseq
-#mkfastqopts="--qc --use-bases-mask Y*,I8N*,Y*,Y*" #--ignore-dual-index --use-bases-mask Y*,I8N*,N*,Y*"
-#for dna/rna
-#mkfastqopts="--qc --ignore-dual-index --use-bases-mask Y*,I8N*,N*,Y*"
-#8 bases sequenced for I7
-mkfastqopts="--qc --ignore-dual-index" # --use-bases-mask Y26N*,I*,N*,Y*"
-#for dna/rna use cellranger-dna
-#mkfastqopts="--qc --ignore-dual-index --use-bases-mask Y26N*,I8N*,N*,Y*"
-
-#--use-bases-mask=Y26,I8,Y151
-
-proc_threads="8"
-read_threads="4"
-write_threads="4"
-VMEM="8G"
 
 usage() {
-echo "Usage: demux-run -s /gale/netapp/seq2/illumina_runs/.samplesheets/180709_K00161_0224_AHVMNJBBXX/SampleSheet_180709_K00161_0224.csv -O \"-p 16\""
+echo "Usage: versity-rsync"
 echo "-s        path to samplesheet file"
 echo "-p        number of processing threads"
 echo "-r        number of reading threads"

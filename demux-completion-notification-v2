@@ -2,8 +2,8 @@
 
 UNALIGNED_PATH="$(pwd)"
 COMMAND_LINE_FILE="*command_line.txt"
-QSTAT_FILE="*qstat.txt"
-QSUB_FILE="*qsub.txt"
+CC="cluo@salk.edu,hanliu@salk.edu,arivkin@salk.edu,aaldridge@salk.edu,castanon@salk.edu"
+
 
 usage() {
 echo "Usage: demux-notify -b /gale/netapp/seq2/illumina_runs/180709_K00161_0224_AHVMNJBBXX"
@@ -73,25 +73,9 @@ samples="$(lanebarcode-samples -l $LANEBARCODE)"
 
 commandline="$(cat $COMMANDLINE)"
 
-qsub_command="$(cat $UNALIGNED_PATH/$QSUB_FILE)"
-
-node="$(cat $UNALIGNED_PATH/$QSTAT_FILE)"
-
-jobid="$(awk '{print $1}' $UNALIGNED_PATH/$QSTAT_FILE)"
-
-jobmetrics="$UNALIGNED_PATH/job_metrics.txt"
-
-qacct -d 2 -o seq -j | grep -A 34 $jobid | grep -E "jobnumber|_time|slots|^mem|maxvmem" > $jobmetrics
-
-jobnumber=$(grep "jobnumber" $jobmetrics)
-start_time=$(grep "start_time" $jobmetrics)
-end_time=$(grep "end_time" $jobmetrics)
-slots=$(grep "slots" $jobmetrics)
-mem=$(grep "^mem" $jobmetrics)
-maxvmem=$(grep "maxvmem" $jobmetrics)
-
-echo $commandline
-
+#echo "$(date "+%Y-%m-%d %H:%M:%S") INFO: $UNALIGNED_DIR"
+#echo "$(date "+%Y-%m-%d %H:%M:%S") INFO: $LANEBARCODE"
+echo "$(date "+%Y-%m-%d %H:%M:%S") INFO: $commandline"
 {
   echo -e "Demux complete.\n" ; \
   echo -e " Path to fastq:" ; \
@@ -100,19 +84,8 @@ echo $commandline
   echo -e "$samples\n" ; \
   echo -e "Projects:" ; \
   echo -e "$projects\n" ; \
-  echo -e "Path to bcl:" ; \
-  echo -e "$RUN_PATH\n" ;\
   echo -e "Command-line invocation:" ; \
   echo -e "$commandline\n" ; \
-  echo -e "SGE invocation:" ; \
-  echo -e "$qsub_command\n" ; \
-#  echo -e "Node:" ; \
-#  echo -e "$node\n" ;\
-  echo -e "$jobnumber" ;\
-  echo -e "$start_time" ;\
-  echo -e "$end_time" ;\
-  echo -e "$slots" ;\
-  echo -e "$mem" ;\
-  echo -e "$maxvmem" ;\
-  echo -e
+  echo -e "Path to bcl:" ; \
+  echo -e "$RUN_PATH\n"
 } | mailx -s "$UNALIGNED_DIR" -a "$LANEBARCODE" -a "$SAMPLESHEET" -a "$RUNINFO" -a "$RUNPARAMETERS" -c "$CC" "$RECIPIENT"
