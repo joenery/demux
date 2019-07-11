@@ -1,0 +1,57 @@
+#!/bin/bash
+#
+
+#constants for demux-run
+DEMUX_CONFIG_PARENT="/gale/netapp/seq2/illumina_runs/.config"
+QSUB_PARENT="/gale/netapp/seq2/illumina_runs/.qsub"
+QSUB_COMMANDS_SCRIPT="commands"
+FASTQ_COMMAND_FILE="commandline.txt"
+BCL_PATH_FILE="bcl_path.txt"
+SAMPLESHEET_NAME="SampleSheet.csv"
+RECIPIENT="jnery@salk.edu"
+COMMANDS2SUBMIT="commands2submit"
+QUEUECONFIG="/gale/netapp/home/seq/bin/queue/qbcl.cfg"
+VERSITY="/gale/versity/seq/illumina_runs"
+COMPLETESTR="complete"
+STOPSTR10X="successfully"
+STOPSTR="error"
+CONFIG="bcl2fastq-config"
+QSUB_D="/gale/netapp/seq2/illumina_runs/.qsub/demux"
+QSUB_V="/gale/netapp/seq2/illumina_runs/.qsub/versity"
+QSUB_U="/gale/netapp/seq2/illumina_runs/.qsub/oracle"
+
+#constants for backup
+BACKUPQUEUECONFIG="/gale/netapp/home/seq/bin/queue/qbackup.cfg"
+EXT="tar.gz"
+TAR_PARENT="/gale/oberon/data4/tars"
+TAR_COMMAND="tar -zcvf"
+SEGMENT="1500"
+CLOUD_PW="~/.cloud"
+CLOUD_COMMAND="java -jar /gale/netapp/home/seq/uploadcli.jar -segment-size $SEGMENT -archive -overwrite -url  https://a429964.storage.oraclecloud.com/v1/Storage-a429964 -service Storage -user gale@salk.edu -password-file $CLOUD_PW -container gale-netapp-seq4 -segments-container gale-netapp-seq4"
+
+#constants for demux-commandline
+NOVASEQ_STRING="A00280"
+MISEQ_STRING="M00412"
+OUTPUT_PARENT="/gale/raidix/rdx-3/illumina_runs"
+SAMPLESHEET_PARENT="/gale/netapp/seq2/illumina_runs/.samplesheets"
+DEFAULT_SAMPLESHEET_NAME="SampleSheet.csv"
+LOG_PARENT="/gale/netapp/seq2/illumina_runs/.demux_logs"
+RTA_COMPLETE="RTAComplete.txt"
+RUN_INFO="RunInfo.xml"
+
+RSYNCING="/gale/netapp/seq2/illumina_runs/.status/rsyncing"
+UPLOADING="/gale/netapp/seq2/illumina_runs/.status/uploading"
+
+RSYNCED="/gale/netapp/seq2/illumina_runs/.status/rsynced"
+UPLOADED="/gale/netapp/seq2/illumina_runs/.status/uploaded"
+ARCHIVED="/gale/netapp/seq2/illumina_runs/.status/archived"
+
+ARCHIVED_D4="/gale/oberon/data4/.archived"
+
+RSYNCED_R2="/gale/raidix/rdx-2/illumina_runs/.status/rsynced"
+UPLOADED_R2="/gale/raidix/rdx-2/illumina_runs/.status/uploaded"
+ARCHIVED_R2="/gale/raidix/rdx-2/illumina_runs/.status/archived"
+
+RSYNCED_HOME="/gale/netapp/home/seq/.status/rsynced"
+UPLOADED_HOME="/gale/netapp/home/seq/.status/uploaded"
+ARCHIVED_HOME="/gale/netapp/home/seq/.status/archived"

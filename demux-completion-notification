@@ -1,20 +1,21 @@
 #!/bin/bash
 
-UNALIGNED_PATH="$(pwd)"
+source "/gale/netapp/home/seq/bin/demux/demux-constants"
+source "/gale/netapp/home/seq/bin/demux/date-time"
+
 COMMAND_LINE_FILE="*command_line.txt"
 QSTAT_FILE="*qstat.txt"
 QSUB_FILE="*qsub.txt"
 
 usage() {
-echo "Usage: demux-notify -b /gale/netapp/seq2/illumina_runs/180709_K00161_0224_AHVMNJBBXX"
-echo "-f	path to fastqs. pwd is default if -f is not specified"
-echo "-r	path run folder containing bcl files"
+echo "Usage: demux-notify -c /gale/netapp/seq2/illumina_runs/.config/180709_K00161_0224_AHVMNJBBXX"
+echo "-c	path to config directory."
 echo "-h	this help message"
 }
 
-while getopts ":f:h" opt; do
+while getopts ":f:c:h" opt; do
   case $opt in
-    f)UNALIGNED_PATH=$OPTARG
+    c)config_path=$OPTARG
       ;;
     h)
       usage
@@ -28,58 +29,34 @@ while getopts ":f:h" opt; do
   esac
 done
 
-UNALIGNED_DIR="$(basename $UNALIGNED_PATH)"
+source "$config_path"
 
 #if no argument (empty string) is given for the run directory, assume the run 
 #directory has the same name as the unaligned directory without the timestamp
 #if [ -z "$name" ] ; then
-#  RUN_PATH="$(echo $UNALIGNED_PATH | awk '{print substr($0, 1, length($0)-13)}')"
+#  bcl_path="$(echo $bcl_path | awk '{print substr($0, 1, length($0)-13)}')"
 #fi
 
-INSTRUMENT=$(echo $UNALIGNED_DIR | awk -F"_" '{print $2}')
 
-FLOWCELL=$(echo $UNALIGNED_DIR | awk -F"_" '{print $4}')
 
-#if the run isn't a MiSeq run remove the side id from flowcell id
-if [ ! $INSTRUMENT == "M00412" ]; then
-  FLOWCELL=${FLOWCELL:1}
-fi
-
-LANEBARCODE="$UNALIGNED_PATH/Reports/html/$FLOWCELL/all/all/all/laneBarcode.html"
-
-SAMPLESHEET="$UNALIGNED_PATH/SampleSheet.csv"
-
-COMMANDLINE="$UNALIGNED_PATH/$COMMAND_LINE_FILE"
-
-RUN_PATH=$(cat $COMMANDLINE | awk '{print $4}')
-
-STATS="$UNALIGNED_PATH/Stats/Stats.json"
+stats="$bcl_path/Stats/Stats.json"
 
 #cat Stats.json | jq '.ReadInfosForLanes[0].ReadInfos[0].NumCycles'
 
-RUNINFO="$UNALIGNED_PATH/RunInfo.xml"
+[ -f $runparameters ] || runparameters="$bcl_path/RunParameters.xml"
 
-RUNPARAMETERS="$UNALIGNED_PATH/runParameters.xml"
+projects="$(lanebarcode-projects -l $lanebarcode)"
 
-[ -f $RUNPARAMETERS ] || RUNPARAMETERS="$UNALIGNED_PATH/RunParameters.xml"
+samples="$(lanebarcode-samples -l $lanebarcode)"
 
-RECIPIENT="jnery@salk.edu"
+qsub_command="$(cat $fastq_path/$QSUB_FILE)"
 
-projects="$(lanebarcode-projects -l $LANEBARCODE)"
+node="$(cat $fastq_path/$QSTAT_FILE)"
 
-projects="$(lanebarcode-projects -l $LANEBARCODE)"
+jobid="$(awk '{print $1}' $fastq_path/$QSTAT_FILE)"
 
-samples="$(lanebarcode-samples -l $LANEBARCODE)"
-
-commandline="$(cat $COMMANDLINE)"
-
-qsub_command="$(cat $UNALIGNED_PATH/$QSUB_FILE)"
-
-node="$(cat $UNALIGNED_PATH/$QSTAT_FILE)"
-
-jobid="$(awk '{print $1}' $UNALIGNED_PATH/$QSTAT_FILE)"
-
-jobmetrics="$UNALIGNED_PATH/job_metrics.txt"
+#jobmetrics="$bcl_path/job_metrics.txt"
+jobmetrics="$qsub_path/job_metrics.txt"
 
 qacct -d 2 -o seq -j | grep -A 34 $jobid | grep -E "jobnumber|_time|slots|^mem|maxvmem" > $jobmetrics
 
@@ -90,24 +67,24 @@ slots=$(grep "slots" $jobmetrics)
 mem=$(grep "^mem" $jobmetrics)
 maxvmem=$(grep "maxvmem" $jobmetrics)
 
-echo $commandline
+echo $bcl2fastq_commandline
 
 {
   echo -e "Demux complete.\n" ; \
   echo -e " Path to fastq:" ; \
-  echo -e "$UNALIGNED_PATH\n" ; \
+  echo -e "$fastq_path\n" ; \
   echo -e "Samples:" ; \
   echo -e "$samples\n" ; \
   echo -e "Projects:" ; \
   echo -e "$projects\n" ; \
   echo -e "Path to bcl:" ; \
-  echo -e "$RUN_PATH\n" ;\
+  echo -e "$bcl_path\n" ;\
   echo -e "Command-line invocation:" ; \
-  echo -e "$commandline\n" ; \
+  echo -e "$bcl2fastq_commandline\n" ; \
   echo -e "SGE invocation:" ; \
   echo -e "$qsub_command\n" ; \
-#  echo -e "Node:" ; \
-#  echo -e "$node\n" ;\
+  echo -e "Node:" ; \
+  echo -e "$node\n" ;\
   echo -e "$jobnumber" ;\
   echo -e "$start_time" ;\
   echo -e "$end_time" ;\
@@ -115,4 +92,4 @@ echo $commandline
   echo -e "$mem" ;\
   echo -e "$maxvmem" ;\
   echo -e
-} | mailx -s "$UNALIGNED_DIR" -a "$LANEBARCODE" -a "$SAMPLESHEET" -a "$RUNINFO" -a "$RUNPARAMETERS" -c "$CC" "$RECIPIENT"
+} | mailx -s "$bcl_dir" -a "$lanebarcode" -a "$samplesheet_path" -a "$runinfo" -a "$runparameters" -c "$CC" "$RECIPIENT"

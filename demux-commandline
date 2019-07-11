@@ -15,17 +15,7 @@
 #described previously.
 #
 
-#Constants
-NOVASEQ_STRING="A00280"
-MISEQ_STRING="M00412"
-OUTPUT_PARENT="/gale/raidix/rdx-3/illumina_runs"
-#OUTPUT_PARENT="/gale/netapp/seq2/illumina_runs"
-#OUTPUT_PARENT="/gale/oberon/data11"
-SAMPLESHEET_PARENT="/gale/netapp/seq2/illumina_runs/.samplesheets"
-DEFAULT_SAMPLESHEET_NAME="SampleSheet.csv"
-LOG_PARENT="/gale/netapp/seq2/illumina_runs/.demux_logs"
-QSUB_PARENT="/gale/netapp/seq2/illumina_runs/.qsub"
-RTA_COMPLETE="RTAComplete.txt"
+source "/gale/netapp/home/seq/bin/demux/demux-constants"
 
 timestamp="$(date "+%y%m%d%H%M%S")"
 run_path="$(pwd)"
@@ -53,7 +43,7 @@ usage() {
 echo "Usage: demux-commandline -s SampleSheet.csv"
 echo "-s	samplesheet filename in default samplesheets directory: "
 echo "	  /gale/netapp/seq2/illumina_runs/.samplesheets/<run folder>"
-echo "-p        number of processing threads"
+echo "-t        number of processing threads"
 echo "-r        number of reading threads"
 echo "-w        number of writing threads"
 echo "-O	additional bcl2fastq options enclosed in quotes"
@@ -65,12 +55,12 @@ echo "            eg, \"-ma\" or \"-m a\" for cellranger-atac"
 echo "-h	this help message"
 }
 
-while getopts ":s:p:r:w:O:m:h" opt; do
+while getopts ":s:t:r:w:O:m:h" opt; do
   case $opt in
     s) 
       samplesheet_arg=$OPTARG
       ;;
-    p)
+    t)
       proc_threads=$OPTARG
       ;;
     r)
@@ -98,7 +88,7 @@ while getopts ":s:p:r:w:O:m:h" opt; do
 done
 
 #check if it's a valid run directory
-if [ ! -f "$run_path/$RTA_COMPLETE" ]; then
+if [ ! -f "$run_path/$RUN_INFO" ]; then
   echo "This does not appear to be a valid run directory!"
   exit 1
 fi

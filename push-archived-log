@@ -1,0 +1,23 @@
+#!/bin/bash
+#
+source "/gale/netapp/home/seq/bin/demux/demux-constants"
+
+#RSYNCED="/gale/netapp/seq2/illumina_runs/.status/rsynced"
+#UPLOADED="/gale/netapp/seq2/illumina_runs/.status/uploaded"
+#ARCHIVED="/gale/netapp/seq2/illumina_runs/.status/archived"
+
+#ARCHIVED_D4="/gale/oberon/data4/.archived"
+
+#RSYNCED_R2="/gale/raidix/rdx-2/illumina_runs/.status/rsynced"
+#UPLOADED_R2="/gale/raidix/rdx-2/illumina_runs/.status/uploaded"
+#ARCHIVED_R2="/gale/raidix/rdx-2/illumina_runs/.status/archived"
+
+#RSYNCED_HOME="/gale/netapp/home/seq/.status/rsynced"
+#UPLOADED_HOME="/gale/netapp/home/seq/.status/uploaded"
+#ARCHIVED_HOME="/gale/netapp/home/seq/.status/archived"
+
+timestamp="$(date "+%y%m%d%H%M%S")"
+TS=$timestamp
+
+echo "Updating archived log with file archived log from sculpin"
+cp $ARCHIVED_D4 $ARCHIVED

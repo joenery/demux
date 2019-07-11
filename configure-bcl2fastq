@@ -1,0 +1,207 @@
+#!/bin/bash
+#input: bcl2fastq_command line string
+#output: bcl2fastq-config file containing variables for the run
+
+#dependencies
+source  ~/bin/demux/var2file
+source ~/bin/demux/demux-constants
+
+#parameter passed to script
+bcl2fastq_commandline=$1
+
+if ! echo $bcl2fastq_commandline | grep -q bcl2fastq && \
+! echo $bcl2fastq_commandline | grep -q "mkfastq" ; then
+  echo "Argument provided does not appear to be a bcl2fastq commandline!"
+  exit 1
+fi
+
+bcl_path="$(echo $bcl2fastq_commandline \
+  | awk '{print $4}')"
+
+bcl_dir="$(echo $bcl_path | awk -F/ '{print $NF}')"
+
+fastq_path="$(echo $bcl2fastq_commandline \
+  | awk '{print $8}')" 
+
+fastq_dir="$(echo $fastq_path | awk -F/ '{print $NF}')"
+
+#check if argument dir is a bcl or fastq directory 
+#fastq directories contain five underscore separated fields
+[ $(echo $bcl_dir | awk -F_ '{print NF}') == "5" ] && \
+demux_config_dir_path="$DEMUX_CONFIG_PARENT/$bcl_dir" || \
+demux_config_dir_path="$DEMUX_CONFIG_PARENT/$fastq_dir"
+
+config_path="$demux_config_dir_path/$CONFIG"
+
+mkdir -p $demux_config_dir_path
+
+echo "#!/bin/bash" > "$(echo $config_path)"
+
+var2file "config_path" "$(echo $config_path)"
+
+var2file "bcl2fastq_commandline" "$(echo $config_path)"
+
+var2file "bcl_path" $(echo $config_path)
+
+var2file "bcl_dir" $(echo $config_path)
+
+var2file "fastq_path" $(echo $config_path)
+
+var2file "fastq_dir" $(echo $config_path)
+
+var2file "demux_config_dir_path" $(echo $config_path)
+
+samplesheet_path="$(echo $bcl2fastq_commandline \
+  | awk '{print $6}')"
+var2file "samplesheet_path" $(echo $config_path)
+
+var2file "fastq_path" $(echo $config_path)
+
+var2file "fastq_dir" $(echo $config_path)
+
+log_path="$(echo $bcl2fastq_commandline \
+  | awk 'END{print $NF}')"
+var2file "log_path" $(echo $config_path)
+
+instrument="$(echo $bcl2fastq_commandline \
+  | awk -F"/" '{print $NF}' \
+  | awk -F"_" '{print $2}')"
+var2file "instrument" $(echo $config_path)
+
+#samplesheet_columns="$(tail -n 1 "$samplesheet_path" | awk -F, '{print NF}')"
+
+demux_log_file="$(echo $bcl2fastq_commandline | awk -F"/" '{print $NF}')"
+var2file "demux_log_file" $(echo $config_path)
+
+#instrument specific variables
+if [ $instrument == "M00412" ]; then
+  flowcell="$(echo ${bcl_dir: -15})"  
+  qsub_dir="$(echo ${demux_log_file: -22:18})"
+  run_year="$(echo ${demux_log_file: -51:2})"
+  pause_demux_comp_check=60
+  pause_backup_comp_check=1800
+else
+  flowcell="$(echo $echo ${bcl_dir: -9})"
+  qsub_dir="$(echo ${demux_log_file: -26:22})"
+  run_year="$(echo ${demux_log_file: -46:2})"
+  pause_demux_comp_check=900
+  pause_backup_comp_check=1800
+fi
+
+#flowcell="$(echo $bcl_dir | awk -F_ '{print $4}')"
+var2file "flowcell" $(echo $config_path)
+
+qsub_dir="demux_$fastq_dir"
+var2file "qsub_dir" $(echo $config_path)
+
+run_year="20"$run_year
+var2file "run_year" $(echo $config_path)
+
+var2file "pause_demux_comp_check" $(echo $config_path)
+
+var2file "pause_backup_comp_check" $(echo $config_path)
+
+versity_year_path="$VERSITY/$run_year"
+var2file "versity_year_path" $(echo $config_path)
+
+qsub_path="$QSUB_D/$qsub_dir"
+var2file "qsub_path" $(echo $config_path)
+
+prefix="versity-"
+
+qsub_versity_fastq_dir="$prefix$fastq_dir"
+var2file "qsub_versity_fastq_dir" $(echo $config_path)
+
+qsub_versity_fastq_path="$QSUB_V/$qsub_versity_fastq_dir"
+var2file "qsub_versity_fastq_path" $(echo $config_path)
+
+qsub_versity_bcl_dir="$prefix$bcl_dir"
+var2file "qsub_versity_bcl_dir" $(echo $config_path)
+
+qsub_versity_bcl_path="$QSUB_V/$qsub_versity_bcl_dir"
+var2file "qsub_versity_bcl_path" $(echo $config_path)
+
+rsync_fastq_commandline="echo $fastq_dir >> $RSYNCING && \
+rsync -avsz $fastq_path $versity_year_path && \
+echo $fastq_dir >> $RSYNCED && \
+ex +g/^"$fastq_dir"$/d -cwq $RSYNCING && \
+chmod -R g+X $versity_year_path/$fastq_dir"
+
+var2file "rsync_fastq_commandline" $(echo $config_path)
+
+versity_fastq_path="$versity_year_path/$fastq_dir"
+var2file "versity_fastq_path" $(echo $config_path)
+
+rsync_bcl_commandline="echo $bcl_dir >> $RSYNCING && \
+rsync -avsz $bcl_path $versity_year_path && \
+echo $bcl_dir >> $RSYNCED && \
+ex +g/^"$bcl_dir"$/d -cwq $RSYNCING && \
+chmod -R g+X $versity_year_path/$bcl_dir"
+
+var2file "rsync_bcl_commandline" $(echo $config_path)
+
+versity_bcl_path="$versity_year_path/$bcl_dir"
+var2file "versity_bcl_path" $(echo $config_path)
+
+prefix="oracle-"
+
+######
+qsub_upload_fastq_dir="$prefix$fastq_dir"
+var2file "qsub_upload_fastq_dir" $(echo $config_path)
+
+qsub_upload_fastq_path="$QSUB_U/$qsub_upload_fastq_dir"
+var2file "qsub_upload_fastq_path" $(echo $config_path)
+
+fastq_tar_path="$TAR_PARENT/$fastq_dir.$EXT"
+var2file "fastq_tar_path" $(echo $config_path)
+
+upload_fastq_commandline="echo $fastq_dir >> $UPLOADING && \
+$TAR_COMMAND $fastq_tar_path $fastq_path && \
+$CLOUD_COMMAND $fastq_tar_path && \
+(ex +g/^"$fastq_dir"$/d -cwq $UPLOADING && \
+echo $fastq_dir >> $UPLOADED && \
+rm -v $fastq_tar_path) || \
+exit 1"
+
+var2file "upload_fastq_commandline" $(echo $config_path)
+
+qsub_upload_bcl_dir="$prefix$bcl_dir"
+var2file "qsub_upload_bcl_dir" $(echo $config_path)
+
+qsub_upload_bcl_path="$QSUB_U/$qsub_upload_bcl_dir"
+var2file "qsub_upload_bcl_path" $(echo $config_path)
+
+bcl_tar_path="$TAR_PARENT/$bcl_dir.$EXT"
+var2file "bcl_tar_path" $(echo $config_path)
+
+upload_bcl_commandline="echo $bcl_dir >> $UPLOADING && \
+$TAR_COMMAND $bcl_tar_path $bcl_path && \
+$CLOUD_COMMAND $bcl_tar_path && \
+(ex +g/^"$bcl_dir"$/d -cwq $UPLOADING && \
+echo $bcl_dir >> $UPLOADED && \
+rm -v $bcl_tar_path) || \
+exit 1"
+
+var2file "upload_bcl_commandline" $(echo $config_path)
+
+thumbnail_path="$bcl_path/Thumbnail_Images"
+var2file "thumbnail_path" $(echo $config_path)
+
+lanebarcode="$fastq_path/Reports/html/$flowcell/all/all/all/laneBarcode.html"
+var2file "lanebarcode" $(echo $config_path)
+
+runinfo="$bcl_path/RunInfo.xml"
+var2file "runinfo" $(echo $config_path)
+
+runparameters="$bcl_path/runParameters.xml"
+var2file "runparameters" $(echo $config_path)
+
+
+
+var2file "config_path" $(echo $config_path)
+
+arr=$(cat $samplesheet_path | awk -F, '{print $NF}' | grep @ | sed 's/\;/\n/g' | sort | uniq )
+CC=$(for i in "${arr[@]}" ; do printf "%s," $i ; done)
+var2file "CC" $(echo $config_path)
+
+echo $config_path
