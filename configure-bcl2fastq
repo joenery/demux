@@ -196,12 +196,11 @@ var2file "runinfo" $(echo $config_path)
 runparameters="$bcl_path/runParameters.xml"
 var2file "runparameters" $(echo $config_path)
 
-
-
 var2file "config_path" $(echo $config_path)
 
 arr=$(cat $samplesheet_path | awk -F, '{print $NF}' | grep @ | sed 's/\;/\n/g' | sort | uniq )
-CC=$(for i in "${arr[@]}" ; do printf "%s," $i ; done)
-var2file "CC" $(echo $config_path)
+cc=$(for i in "${arr[@]}" ; do printf "%s," $i ; done)
+cc=$(echo "$cc" | sed 's:,*$::')
+var2file "cc" $(echo $config_path)
 
 echo $config_path

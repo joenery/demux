@@ -13,9 +13,9 @@ source "/gale/netapp/home/seq/bin/demux/var2file"
 #for dna/rna
 #mkfastqopts="--qc --ignore-dual-index --use-bases-mask Y*,I8N*,N*,Y*"
 #8 bases sequenced for I7
-mkfastqopts="--barcode-mismatches 0 --qc --ignore-dual-index " # --use-bases-mask Y26N*,I*,N*,Y*"
-#for dna/rna use cellranger-dna
-#mkfastqopts="--qc --ignore-dual-index --use-bases-mask Y26N*,I8N*,N*,Y*"
+#mkfastqopts="--barcode-mismatches 0 --qc --ignore-dual-index " # --use-bases-mask Y26N*,I*,N*,Y*"
+#for dna or rna with longer than 28 base read 1 and an index read 2, use cellranger-dna
+mkfastqopts="--qc --ignore-dual-index --use-bases-mask Y28N*,I8N*,N*,Y*"
 
 #--use-bases-mask=Y26,I8,Y151
 
@@ -36,7 +36,7 @@ echo "-m        select cellranger mkfastq script. options:"
 echo "            a: cellranger-atac"
 echo "            c: cellranger"
 echo "            d: cellranger-dna"
-echo "-M        email notice recipients, comma separated list, enclosed in parantheses"
+echo "-M        email notice recipients, comma separated list, enclosed in quotes"
 echo "-n        do not backup files"
 echo "-h        display this help message"
 }
@@ -65,7 +65,7 @@ while getopts ":s:p:r:w:v:O:m:M:nh" opt; do
       mkfastq_vers=$OPTARG
       ;;
     M)
-      CC=$OPTARG
+      mail_to=$OPTARG
       ;;
     n)
       backup="no"
@@ -89,7 +89,7 @@ threads="$(($proc_threads + $read_threads + $write_threads))"
 
 #generate bcl2fastq command line
 if [ ! -z ${mkfastq_vers+x} ] ; then
-  bcl2fastq_commandline=$(demux-commandline -s "$SAMPLESHEET_PATH" -O "$mkfastqopts" -m "$mkfastq_vers")
+  bcl2fastq_commandline=$(demux-commandline -s "$SAMPLESHEET_PATH" -t "$proc_threads" -r "$read_threads" -w "$write_threads" -O "$mkfastqopts" -m "$mkfastq_vers")
 else
   bcl2fastq_commandline=$(demux-commandline -s "$SAMPLESHEET_PATH" -t "$proc_threads" -r "$read_threads" -w "$write_threads" -O "$bclopts")
 fi
@@ -108,6 +108,10 @@ echo "$(date_time) INFO: Command-line invocation: $bcl2fastq_commandline"
 
 source $(configure-bcl2fastq "$bcl2fastq_commandline") || exit 1
 
+#[ -z $cc ] && cc="$mail_to" || cc=$(echo "$cc,$mail_recipients")
+if [ ! -z "$mail_to" ] && [ -z "$cc" ]; then cc="$mail_to"; elif [ ! -z "$mail_to" ] && [ ! -z "$cc" ]; then cc="$(echo "$cc,$mail_to")";fi
+var2file "cc" $(echo $config_path)
+
 echo "$(date_time) INFO: Making qsub directory: $qsub_path"
 
 mkdir $qsub_path
@@ -124,11 +128,11 @@ echo "$(date_time) INFO: Submitting job to queue"
 echo "$(date_time) INFO: Queue config file $QUEUECONFIG"
 
 if [ "$mkfastq" = true  ] || [ "$mkfastq_dna" = true  ] ; then
-  2q -p "demux" -c $QUEUECONFIG -t "16" -v "8G" # -M "$CC"
-  echo "$(date_time) INFO: 2q -p "demux" -c $QUEUECONFIG -t "16" -v "8G"" # -M "$CC""
+  2q -p "demux" -c $QUEUECONFIG -t "16" -v "8G" #-M "$cc"
+  echo "$(date_time) INFO: 2q -p "demux" -c $QUEUECONFIG -t "16" -v "8G"" # -M "$cc""
 else
-  2q -p "demux" -c $QUEUECONFIG -t "$threads" -v "$VMEM" # -M "$CC"
-  echo "$(date_time) INFO: 2q -p "demux" -c $QUEUECONFIG -t "$threads" -v "$VMEM"" # -M "$CC""
+  2q -p "demux" -c $QUEUECONFIG -t "$threads" -v "$VMEM" # -M "$cc"
+  echo "$(date_time) INFO: 2q -p "demux" -c $QUEUECONFIG -t "$threads" -v "$VMEM"" # -M "$cc""
 fi
 
 node=$(qstatx | grep "$qsub_dir")
@@ -192,10 +196,10 @@ echo "$(date_time) INFO: Demux Started. Sending notification"
   echo -e "SGE invocation:" ; \
   echo -e "$qsub_command\n" ; \
   echo -e "jobnumber:" ; \
-  echo -e "$node"
+  echo -e "$node\n"
   echo -e "bcl2fastq configuration:" ; \
   echo -e "$configuration"
-} | mailx -s "$bcl_path" -c $CC "$RECIPIENT"
+} | mailx -s "$bcl_path" "$RECIPIENT" # -c "$cc"
 
 #
 # loop until demux completes by
@@ -220,10 +224,10 @@ if echo $log_message | grep -q $COMPLETESTR ; then
 
   #remove thumbnail images prior to backing up
   echo "$(date_time) INFO: Removing Thumbnail_Images directory if present."
-  [[ -d $thumbnail_path/L001 || -d $thumbnail_path/L002 || \
-     -d $thumbnail_path/L003 || -d $thumbnail_path/L004 || \
-     -d $thumbnail_path/L005 || -d $thumbnail_path/L006 || \
-     -d $thumbnail_path/L007 || -d $thumbnail_path/L008 ]] && \
+  #[[ -d $thumbnail_path/L001 || -d $thumbnail_path/L002 || \
+  #   -d $thumbnail_path/L003 || -d $thumbnail_path/L004 || \
+  #   -d $thumbnail_path/L005 || -d $thumbnail_path/L006 || \
+  #   -d $thumbnail_path/L007 || -d $thumbnail_path/L008 ]] && \
      rm -rfv $thumbnail_path
 
   sleep 60

@@ -83,8 +83,8 @@ echo $bcl2fastq_commandline
   echo -e "$bcl2fastq_commandline\n" ; \
   echo -e "SGE invocation:" ; \
   echo -e "$qsub_command\n" ; \
-  echo -e "Node:" ; \
-  echo -e "$node\n" ;\
+#  echo -e "Node:" ; \
+#  echo -e "$node\n" ;\
   echo -e "$jobnumber" ;\
   echo -e "$start_time" ;\
   echo -e "$end_time" ;\
@@ -92,4 +92,4 @@ echo $bcl2fastq_commandline
   echo -e "$mem" ;\
   echo -e "$maxvmem" ;\
   echo -e
-} | mailx -s "$bcl_dir" -a "$lanebarcode" -a "$samplesheet_path" -a "$runinfo" -a "$runparameters" -c "$CC" "$RECIPIENT"
+} | mailx -s "$bcl_dir" -a "$lanebarcode" -a "$samplesheet_path" -a "$runinfo" -a "$runparameters" -c "$cc" "$RECIPIENT"
