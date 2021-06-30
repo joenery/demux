@@ -1,0 +1,71 @@
+#!/bin/bash
+
+source "/gale/netapp/home/seq/bin/demux/demux-constants"
+source "/gale/netapp/home/seq/bin/demux/date-time"
+
+usage() {
+echo "Usage: demux-notify -c /gale/netapp/seq2/illumina_runs/.config/180709_K00161_0224_AHVMNJBBXX"
+echo "-p        path to directory (optional; will use pwd)"
+echo "-h        this help message."
+}
+
+while getopts ":s:p:h" opt; do
+  case $opt in
+    r)run_path=$OPTARG;;
+    h)
+      usage
+      exit 1
+      ;;
+    \?)
+      echo "Invalid option: -$OPTARG"
+      usage
+      exit 1
+      ;;
+  esac
+done
+
+[ -z $run_path ] && run_path=$(pwd)
+
+run="$(echo $run_path | awk -F/ '{print $NF}')"
+
+declare -A getname
+getname=(["bawang@salk.edu"]="Bang-An" ["rhenley@salk.edu"]="Bobby" ["hanliu@salk.edu"]="Hanqing" ["abartlett@salk.edu"]="Anna" ["barragan@salk.edu"]="Cesar" ["castanon@salk.edu"]="Rosa" ["cluo@salk.edu"]="Chongyuan" ["hsong@salk.edu"]="Haili" ["mhariharan@salk.edu"]="Manoj" ["sniu@salk.edu"]="Simon" ["zhzhang@salk.edu"]="Zhuzhu")
+emails="$(samplesheet-emails SampleSheet*)"
+names=$(for i in $(samplesheet-emails SampleSheet*) ; do echo ${getname[$(strip-m "$i")]} ; done)
+samples="$(samplesheet-samples SampleSheet*)"
+samplesheet_cc=$(for i in "${emails[@]}" ; do printf "%s," $i ; done)
+samplesheet_cc=$(tr -dc '[[:print:]]' <<< "$samplesheet_cc") #remove nonprinting characters
+samplesheet_cc=$(echo "$samplesheet_cc" | sed 's:,*$::') #remove trailing comma
+cc=$(echo "$samplesheet_cc,$recipient_cc" )
+instrument_id=$(echo $run | awk -F'_' '{print $2}')
+
+case $instrument_id in
+  M00412)instrument="MiSeq";;
+  A00280)instrument="NovaSeq 6000";;
+  K00161)instrument="HiSeq 4000";;
+esac
+
+{
+  echo -e "Samples for the following are being sequenced on the $instrument:" ;\
+  echo -e "$names\n\n" ;\
+  echo -e "The samples are:" ;\
+  echo -e "$samples\n" ;\
+  echo -e
+} | mailx -s "$run" -c "$cc" -r "$RECIPIENT" "$RECIPIENT"
+
+exit
+
+cat <<EOF | sendmail -t < SampleSheet.csv
+To: $RECIPIENT
+From: $RECIPIENT
+Subject: $run
+Cc: 
+
+Samples for the following are being sequenced on the $instrument:
+$emails
+
+The samples are:
+$samples
+
+.
+EOF

@@ -1,0 +1,39 @@
+#!/bin/bash
+#input: bcl2fastq_command line string
+#output: bcl2fastq-config file containing variables for the run
+
+#usage
+# get-config "${command-line}"
+
+#dependencies
+source  ~/bin/demux/var2file
+source ~/bin/demux/demux-constants
+
+#parameter passed to script
+bcl2fastq_commandline=$1
+
+if ! echo $bcl2fastq_commandline | grep -q bcl2fastq && \
+! echo $bcl2fastq_commandline | grep -q "mkfastq" ; then
+  echo "Argument provided does not appear to be a bcl2fastq commandline!"
+  exit 1
+fi
+
+bcl_path="$(echo $bcl2fastq_commandline \
+  | awk '{print $4}')"
+
+bcl_dir="$(echo $bcl_path | awk -F/ '{print $NF}')"
+
+fastq_path="$(echo $bcl2fastq_commandline \
+  | awk '{print $8}')" 
+
+fastq_dir="$(echo $fastq_path | awk -F/ '{print $NF}')"
+
+#check if argument dir is a bcl or fastq directory 
+#fastq directories contain five underscore separated fields
+[ $(echo $bcl_dir | awk -F_ '{print NF}') == "5" ] && \
+demux_config_dir_path="$DEMUX_CONFIG_PARENT/$bcl_dir" || \
+demux_config_dir_path="$DEMUX_CONFIG_PARENT/$fastq_dir"
+
+config_path="$demux_config_dir_path/$CONFIG"
+
+echo $config_path

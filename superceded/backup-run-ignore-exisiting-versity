@@ -1,0 +1,73 @@
+#!/bin/bash
+#
+
+source "/gale/netapp/home/seq/bin/demux/demux-constants"
+source "/gale/netapp/home/seq/bin/demux/date-time"
+source "/gale/netapp/home/seq/bin/demux/submit2q"
+
+proc_threads="1"
+read_threads="1"
+write_threads="1"
+VMEM="8G"
+
+usage() {
+echo "Usage: demux-run -s /gale/netapp/seq2/illumina_runs/.samplesheets/180709_K00161_0224_AHVMNJBBXX/SampleSheet_180709_K00161_0224.csv -O \"-p 16\""
+echo "-s        path to source directory"
+}
+
+while getopts ":s:h" opt; do
+  case $opt in
+    s) 
+      SOURCE_PATH=$OPTARG
+      ;;
+    h) 
+      usage
+      exit 1
+      ;;
+    \?)
+      echo "Invalid option: -$OPTARG"
+      usage
+      exit 1
+      ;;
+  esac
+done
+
+cd $SOURCE_PATH
+
+touch $SOURCE_PATH/SampleSheet_run_backup.csv
+
+#generate bcl2fastq command line
+touch $SOURCE_PATH/SampleSheet_run_backup.csv && \
+bcl2fastq_commandline=$(demux-commandline -s "$SOURCE_PATH/SampleSheet_run_backup.csv" \
+                        -t "$proc_threads" -r "$read_threads" \
+                        -w "$write_threads" -O "$bclopts") || exit 1
+
+#parse variables from bcl2fastq command line,
+#write them to config file,
+#and source the file for use below
+source $(configure-bcl2fastq "$bcl2fastq_commandline")
+
+#remove thumbnail images prior to backing up
+echo "$(date_time) INFO: Removing Thumbnail_Images directory if present."
+[[ -d $thumbnail_path/L001 || -d $thumbnail_path/L002 || \
+   -d $thumbnail_path/L003 || -d $thumbnail_path/L004 || \
+   -d $thumbnail_path/L005 || -d $thumbnail_path/L006 || \
+   -d $thumbnail_path/L007 || -d $thumbnail_path/L008 ]] && \
+   rm -rf $thumbnail_path
+echo
+
+sleep 60
+
+#rsync bcl to versity
+echo "$(date_time) INFO: Backing up bcl to versity:"
+echo $rsync_bcl_commandline
+echo
+submit2q-ignore-exisiting-versity "$rsync_bcl_commandline" "$qsub_versity_bcl_path" "$qsub_versity_bcl_dir" "$versity_bcl_path" "$bcl_dir"
+
+#tar and upload bcl
+echo "$(date_time) INFO: Tarring and uploading bcl to cloud:"
+echo $upload_bcl_commandline
+echo
+submit2q-ignore-exisiting-versity "$upload_bcl_commandline" "$qsub_upload_bcl_path" "$qsub_upload_bcl_dir" "$bcl_tar_path" "$bcl_dir"
+
+exit 0

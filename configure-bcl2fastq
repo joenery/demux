@@ -55,9 +55,9 @@ samplesheet_path="$(echo $bcl2fastq_commandline \
   | awk '{print $6}')"
 var2file "samplesheet_path" $(echo $config_path)
 
-var2file "fastq_path" $(echo $config_path)
+#var2file "fastq_path" $(echo $config_path)
 
-var2file "fastq_dir" $(echo $config_path)
+#var2file "fastq_dir" $(echo $config_path)
 
 log_path="$(echo $bcl2fastq_commandline \
   | awk 'END{print $NF}')"
@@ -101,91 +101,14 @@ var2file "pause_demux_comp_check" $(echo $config_path)
 
 var2file "pause_backup_comp_check" $(echo $config_path)
 
-versity_year_path="$VERSITY/$run_year"
-var2file "versity_year_path" $(echo $config_path)
-
 qsub_path="$QSUB_D/$qsub_dir"
 var2file "qsub_path" $(echo $config_path)
 
-prefix="versity-"
-
-qsub_versity_fastq_dir="$prefix$fastq_dir"
-var2file "qsub_versity_fastq_dir" $(echo $config_path)
-
-qsub_versity_fastq_path="$QSUB_V/$qsub_versity_fastq_dir"
-var2file "qsub_versity_fastq_path" $(echo $config_path)
-
-qsub_versity_bcl_dir="$prefix$bcl_dir"
-var2file "qsub_versity_bcl_dir" $(echo $config_path)
-
-qsub_versity_bcl_path="$QSUB_V/$qsub_versity_bcl_dir"
-var2file "qsub_versity_bcl_path" $(echo $config_path)
-
-rsync_fastq_commandline="echo $fastq_dir >> $RSYNCING && \
-rsync -avsz $fastq_path $versity_year_path && \
-echo $fastq_dir >> $RSYNCED && \
-ex +g/^"$fastq_dir"$/d -cwq $RSYNCING && \
-chmod -R g+X $versity_year_path/$fastq_dir"
-
-var2file "rsync_fastq_commandline" $(echo $config_path)
-
-versity_fastq_path="$versity_year_path/$fastq_dir"
-var2file "versity_fastq_path" $(echo $config_path)
-
-rsync_bcl_commandline="echo $bcl_dir >> $RSYNCING && \
-rsync -avsz $bcl_path $versity_year_path && \
-echo $bcl_dir >> $RSYNCED && \
-ex +g/^"$bcl_dir"$/d -cwq $RSYNCING && \
-chmod -R g+X $versity_year_path/$bcl_dir"
-
-var2file "rsync_bcl_commandline" $(echo $config_path)
-
-versity_bcl_path="$versity_year_path/$bcl_dir"
-var2file "versity_bcl_path" $(echo $config_path)
-
-prefix="oracle-"
-
-######
-qsub_upload_fastq_dir="$prefix$fastq_dir"
-var2file "qsub_upload_fastq_dir" $(echo $config_path)
-
-qsub_upload_fastq_path="$QSUB_U/$qsub_upload_fastq_dir"
-var2file "qsub_upload_fastq_path" $(echo $config_path)
-
-fastq_tar_path="$TAR_PARENT/$fastq_dir.$EXT"
-var2file "fastq_tar_path" $(echo $config_path)
-
-upload_fastq_commandline="echo $fastq_dir >> $UPLOADING && \
-$TAR_COMMAND $fastq_tar_path $fastq_path && \
-$CLOUD_COMMAND $fastq_tar_path && \
-(ex +g/^"$fastq_dir"$/d -cwq $UPLOADING && \
-echo $fastq_dir >> $UPLOADED && \
-rm -v $fastq_tar_path) || \
-exit 1"
-
-var2file "upload_fastq_commandline" $(echo $config_path)
-
-qsub_upload_bcl_dir="$prefix$bcl_dir"
-var2file "qsub_upload_bcl_dir" $(echo $config_path)
-
-qsub_upload_bcl_path="$QSUB_U/$qsub_upload_bcl_dir"
-var2file "qsub_upload_bcl_path" $(echo $config_path)
-
-bcl_tar_path="$TAR_PARENT/$bcl_dir.$EXT"
-var2file "bcl_tar_path" $(echo $config_path)
-
-upload_bcl_commandline="echo $bcl_dir >> $UPLOADING && \
-$TAR_COMMAND $bcl_tar_path $bcl_path && \
-$CLOUD_COMMAND $bcl_tar_path && \
-(ex +g/^"$bcl_dir"$/d -cwq $UPLOADING && \
-echo $bcl_dir >> $UPLOADED && \
-rm -v $bcl_tar_path) || \
-exit 1"
-
-var2file "upload_bcl_commandline" $(echo $config_path)
-
 thumbnail_path="$bcl_path/Thumbnail_Images"
 var2file "thumbnail_path" $(echo $config_path)
+
+undetermined_path="$fastq_path/Undetermined*.fastq.gz"
+var2file "undetermined_path" $(echo $config_path)
 
 lanebarcode="$fastq_path/Reports/html/$flowcell/all/all/all/laneBarcode.html"
 var2file "lanebarcode" $(echo $config_path)
@@ -196,11 +119,28 @@ var2file "runinfo" $(echo $config_path)
 runparameters="$bcl_path/runParameters.xml"
 var2file "runparameters" $(echo $config_path)
 
+trello_conf="$bcl_path/trello.conf"
+var2file "trello_conf" $(echo $config_path)
+
+qc_conf="$bcl_path/qc.conf"
+var2file "qc_conf" $(echo $config_path)
+
 var2file "config_path" $(echo $config_path)
 
-arr=$(cat $samplesheet_path | awk -F, '{print $NF}' | grep @ | sed 's/\;/\n/g' | sort | uniq )
-cc=$(for i in "${arr[@]}" ; do printf "%s," $i ; done)
-cc=$(echo "$cc" | sed 's:,*$::')
-var2file "cc" $(echo $config_path)
+cat $samplesheet_path | grep -q \" && email_string="quoted" || email_string="semicolon_separated"
+case $email_string in
+  quoted)
+    arr=$(cat $samplesheet_path | awk -F\" '{print $2}' | sed 's/\;/\n/g' | sort | uniq ) ;;
+  semicolon_separated)
+    #arr=$(cat $samplesheet_path | awk -F, '{print $NF}' | grep @ | sed 's/\;/\n/g' | sort | uniq )
+    arr=$(cat $samplesheet_path | awk -F, '{gsub(/"/, "", $NF); print $NF}' | grep @ | sed 's/\;/\n/g' | sort | uniq ) ;;
+esac
+
+samplesheet_cc=$(for i in "${arr[@]}" ; do printf "%s," $i ; done)
+samplesheet_cc=$(tr -dc '[[:print:]]' <<< "$samplesheet_cc") #remove nonprinting characters
+samplesheet_cc=$(echo "$samplesheet_cc" | sed 's:,*$::') #remove trailing comma
+var2file "samplesheet_cc" $(echo $config_path)
+
+cat $bcl_path/trello.conf >> $config_path
 
 echo $config_path

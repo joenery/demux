@@ -9,6 +9,7 @@ FASTQ_COMMAND_FILE="commandline.txt"
 BCL_PATH_FILE="bcl_path.txt"
 SAMPLESHEET_NAME="SampleSheet.csv"
 RECIPIENT="jnery@salk.edu"
+recipient_cc="ecker@salk.edu"
 COMMANDS2SUBMIT="commands2submit"
 QUEUECONFIG="/gale/netapp/home/seq/bin/queue/qbcl.cfg"
 VERSITY="/gale/versity/seq/illumina_runs"
@@ -23,43 +24,62 @@ QSUB_U="/gale/netapp/seq2/illumina_runs/.qsub/oracle"
 #constants for backup
 BACKUPQUEUECONFIG="/gale/netapp/home/seq/bin/queue/qbackup.cfg"
 EXT="tar.gz"
-TAR_PARENT="/gale/oberon/data4/tars"
+TAR_PARENT="/gale/oberon/data5/tars"
 TAR_COMMAND="tar -zcvf"
 SEGMENT="1500"
 CLOUD_PW="~/.cloud"
 CLOUD_COMMAND="java -jar /gale/netapp/home/seq/uploadcli.jar -segment-size $SEGMENT -archive -overwrite -url  https://a429964.storage.oraclecloud.com/v1/Storage-a429964 -service Storage -user gale@salk.edu -password-file $CLOUD_PW -container gale-netapp-seq4 -segments-container gale-netapp-seq4"
+AR_LOG_PARENT="/gale/netapp/home/seq/logs/ar"
 
 #constants for demux-commandline
 NOVASEQ_STRING="A00280"
 MISEQ_STRING="M00412"
-OUTPUT_PARENT="/gale/raidix/rdx-3/illumina_runs"
+MISEQ_OUTPUT_PARENT="/gale/netapp/seq2/illumina_runs"
+OUTPUT_PARENT="/gale/raidix/rdx-2/illumina_runs"
 SAMPLESHEET_PARENT="/gale/netapp/seq2/illumina_runs/.samplesheets"
 DEFAULT_SAMPLESHEET_NAME="SampleSheet.csv"
 LOG_PARENT="/gale/netapp/seq2/illumina_runs/.demux_logs"
 RTA_COMPLETE="RTAComplete.txt"
 RUN_INFO="RunInfo.xml"
 
-RSYNCING="/gale/netapp/seq2/illumina_runs/.status/rsyncing"
-UPLOADING="/gale/netapp/seq2/illumina_runs/.status/uploading"
+RSYNCING="/gale/netapp/home/seq/.status/rsyncing"
+UPLOADING="/gale/netapp/home/seq/.status/uploading"
+ARCHIVING="/gale/netapp/home/seq/.status/archiving"
+DEEPARCHIVING="/gale/netapp/home/seq/.status/deeparchiving"
 
-RSYNCED="/gale/netapp/seq2/illumina_runs/.status/rsynced"
-UPLOADED="/gale/netapp/seq2/illumina_runs/.status/uploaded"
-ARCHIVED="/gale/netapp/seq2/illumina_runs/.status/archived"
-
-#RSYNCED="/gale/netapp/home/seq/.status/rsynced"
-#UPLOADED="/gale/netapp/home/seq/.status/uploaded"
-#ARCHIVED="/gale/netapp/home/seq/.status/archived"
+RSYNCED="/gale/netapp/home/seq/.status/rsynced"
+UPLOADED="/gale/netapp/home/seq/.status/uploaded"
+ARCHIVED="/gale/netapp/home/seq/.status/archived"
+DEEPARCHIVED="/gale/netapp/home/seq/.status/deeparchived"
 
 ARCHIVED_D4="/gale/oberon/data4/.archived"
 
 RSYNCED_R2="/gale/raidix/rdx-2/illumina_runs/.status/rsynced"
 UPLOADED_R2="/gale/raidix/rdx-2/illumina_runs/.status/uploaded"
 ARCHIVED_R2="/gale/raidix/rdx-2/illumina_runs/.status/archived"
+DEEPARCHIVED_R2="/gale/raidix/rdx-2/illumina_runs/.status/deeparchived"
 
-#RSYNCED_S2="/gale/netapp/seq2/illumina_runs/.status/rsynced"
-#UPLOADED_S2="/gale/netapp/seq2/illumina_runs/.status/uploaded"
-#ARCHIVED_S2="/gale/netapp/seq2/illumina_runs/.status/archived"
+RSYNCED_S2="/gale/netapp/seq2/illumina_runs/.status/rsynced"
+UPLOADED_S2="/gale/netapp/seq2/illumina_runs/.status/uploaded"
+ARCHIVED_S2="/gale/netapp/seq2/illumina_runs/.status/archived"
+DEEPARCHIVED_S2="/gale/netapp/seq2/illumina_runs/.status/deeparchived"
 
-RSYNCED_HOME="/gale/netapp/home/seq/.status/rsynced"
-UPLOADED_HOME="/gale/netapp/home/seq/.status/uploaded"
-ARCHIVED_HOME="/gale/netapp/home/seq/.status/archived"
+seq2=archive/gale-netapp/seq2
+seq3=/archive/gale-netapp/seq3
+seq4=/archive/gale-netapp/seq4
+seq5=/archive/gale-netapp/seq5
+data1=/archive/oberon/data1
+data10=/archive/oberon/data10
+data11=/archive/oberon/data11
+data2=/archive/oberon/data2
+data3=/archive/oberon/data3
+data4=/archive/oberon/data4
+data6=/archive/oberon/data6
+data7=/archive/oberon/data7
+data8=/archive/oberon/data8
+data9=/archive/oberon/data9
+thumper1=/archive/thumper-e1/zpool1
+thumper2=/archive/thumper-e2/zpool1
+thumper3=/archive/thumper-e3/zpool1
+thumper4=/archive/thumper-e4/zpool1
+

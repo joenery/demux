@@ -1,0 +1,316 @@
+#!/bin/bash
+#
+QSUB_PARENT="/gale/netapp/seq2/illumina_runs/.qsub"
+QSUB_COMMANDS_SCRIPT="commands"
+FASTQ_COMMAND_FILE="command_line.txt"
+BCL_PATH_FILE="bcl_path.txt"
+SAMPLESHEET_NAME="SampleSheet.csv"
+RECIPIENT="jnery@salk.edu"
+CC="jnery@salk.edu"
+COMMANDS2SUBMIT="commands2submit"
+QUEUECONFIG=~/bin/queue/qbcl.cfg
+VERSITY="/gale/versity/seq/illumina_runs"
+QSUB_VERSITY_PARENT="/gale/netapp/seq2/illumina_runs/.qsub_versity"
+COMPLETESTR="complete"
+STOPSTR10X="successfully"
+STOPSTR="error"
+
+#i5 index should be treated as a read and not an index so use Y instead of I
+#for atacseq
+#mkfastqopts="--qc --use-bases-mask Y*,I8N*,Y*,Y*" #--ignore-dual-index --use-bases-mask Y*,I8N*,N*,Y*"
+#for dna/rna
+#mkfastqopts="--qc --ignore-dual-index --use-bases-mask Y*,I8N*,N*,Y*"
+#8 bases sequenced for I7
+mkfastqopts="--qc --ignore-dual-index" # --use-bases-mask Y26N*,I*,N*,Y*"
+#for dna/rna use cellranger-dna
+#mkfastqopts="--qc --ignore-dual-index --use-bases-mask Y26N*,I8N*,N*,Y*"
+
+#--use-bases-mask=Y26,I8,Y151
+
+proc_threads="8"
+read_threads="4"
+write_threads="4"
+VMEM="8G"
+
+usage() {
+echo "Usage: demux-run -s /gale/netapp/seq2/illumina_runs/.samplesheets/180709_K00161_0224_AHVMNJBBXX/SampleSheet_180709_K00161_0224.csv -O \"-p 16\""
+echo "-s        path to samplesheet file"
+echo "-p        number of processing threads"
+echo "-r        number of reading threads"
+echo "-w        number of writing threads"
+echo "-v        h_vmem to use per proc"
+echo "-O        additional bcl2fastq options"
+echo "-m        select cellranger mkfastq script. options:"
+echo "            a: cellranger-atac"
+echo "            c: cellranger"
+echo "            d: cellranger-dna"
+echo "-M        email notice recipients, comma separated list, enclosed in parantheses"
+echo "-h        display this help message"
+}
+
+while getopts ":s:p:r:w:v:O:m:M:h" opt; do
+  case $opt in
+    s) 
+      SAMPLESHEET_PATH=$OPTARG
+      ;;
+    p)
+      proc_threads=$OPTARG
+      ;;
+    r)
+      read_threads=$OPTARG
+      ;;
+    w)
+      write_threads=$OPTARG
+      ;;
+    v) 
+      VMEM=$OPTARG
+      ;;
+    O)
+      bclopts=$OPTARG
+      ;;
+    m)
+      mkfastq_vers=$OPTARG
+      ;;
+    M)
+      CC=$OPTARG
+      ;;
+    h) 
+      usage
+      exit 1
+      ;;
+    \?)
+      echo "Invalid option: -$OPTARG"
+      usage
+      exit 1
+      ;;
+  esac
+done
+
+function date_time(){
+  echo $(date "+%Y-%m-%d %H:%M:%S");
+}
+
+echo "$(date_time) INFO: bclopts: $bclopts"
+echo "$(date_time) INFO: mkfastqopts: $mkfastqopts"
+
+threads="$(($proc_threads + $read_threads + $write_threads))"
+
+#generate bcl2fastq command line
+if [ ! -z ${mkfastq_vers+x} ] ; then
+  bcl2fastq_command_line=$(demux-commandline -s "$SAMPLESHEET_PATH" -O "$mkfastqopts" -m "$mkfastq_vers")
+else
+  bcl2fastq_command_line=$(demux-commandline -s "$SAMPLESHEET_PATH" -p "$proc_threads" -r "$read_threads" -w "$write_threads" -O "$bclopts")
+fi
+
+#check demux-commandline script exit status
+if [ $(echo $?) -eq 1 ] ; then
+  echo "$bcl2fastq_command_line"
+  exit 1
+fi
+
+echo "$(date_time) INFO: Command-line invocation: $bcl2fastq_command_line"
+
+#parse command line
+bcl_path="$(echo $bcl2fastq_command_line \
+  | awk '{print $4}')"
+
+samplesheet_path="$(echo $bcl2fastq_command_line \
+  | awk '{print $6}')"
+
+fastq_path="$(echo $bcl2fastq_command_line \
+  | awk '{print $8}')"
+
+fastq_dir="$(echo $fastq_path | awk -F/ '{print $NF}')"
+
+log_path="$(echo $bcl2fastq_command_line \
+  | awk 'END{print $NF}')"
+
+instrument="$(echo $bcl2fastq_command_line \
+  | awk -F"/" '{print $NF}' \
+  | awk -F"_" '{print $2}')"
+
+samplesheet_columns="$(tail -n 1 "$samplesheet_path" | awk -F, '{print NF}')"
+
+#nohup bcl2fastq -R /gale/netapp/seq2/illumina_runs/190110_K00161_0255_AH33L2BBXY --sample-sheet /gale/netapp/seq2/illumina_runs/.samplesheets/190110_K00161_0255_AH33L2BBXY/SampleSheet.csv -o /gale/oberon/data1/190110_K00161_0255_AH33L2BBXY_190122155335 -p 4 -r 4 -w 4 &> /gale/netapp/seq2/illumina_runs/.demux_logs/190110_K00161_0255_AH33L2BBXY_190122155335.txt
+
+demux_log_file="$(echo $bcl2fastq_command_line | awk -F"/" '{print $NF}')"
+#190110_K00161_0255_AH33L2BBXY_190122155335.txt
+
+if [ $instrument == "M00412" ]; then
+  qsub_dir="$(echo ${demux_log_file: -22:18})"
+  year="$(echo ${demux_log_file: -51:2})"
+  sleeptime=60
+else
+  qsub_dir="$(echo ${demux_log_file: -26:22})"
+  year="$(echo ${demux_log_file: -46:2})"
+  sleeptime=900
+  #H33L2BBXY_190122155335
+fi
+
+qsub_path="$QSUB_PARENT/$qsub_dir"
+
+versity_qsub_dir=$qsub_dir"_versity"
+
+versity_qsub_path="$QSUB_VERSITY_PARENT/$versity_qsub_dir"
+
+year="20"$year
+ 
+VERSITY_PARENT=$VERSITY/$year/
+
+#rsync -avsz /gale/netapp/scratch2/illumina_runs/180214_K00161_0195_BHNYVTBBXX /gale/versity/seq/illumina_runs/2018
+rsync_command_line="rsync -avsz $fastq_path $VERSITY_PARENT"
+
+echo "$(date_time) INFO: Making qsub directory: $qsub_path"
+
+mkdir $qsub_path
+
+cd $qsub_path
+
+#write bcl2fastq_command_line to commands script
+echo "$bcl2fastq_command_line" >> $qsub_path/$QSUB_COMMANDS_SCRIPT
+
+#write qsub commands script that calls pipeline
+#echo "bash $qsub_path/pipeline" > $qsub_path/commands
+
+echo "$(date_time) INFO: Submitting job to queue"
+
+ls -l "$QUEUECONFIG"
+
+if [ "$mkfastq" = true  ] || [ "$mkfastq_dna" = true  ] ; then
+  2q -c $QUEUECONFIG -t "16" -v "8G" -M "$CC"
+  echo "$(date_time) INFO: 2q -t "16" -v "8G""
+else
+  2q -c $QUEUECONFIG -t "$threads" -v "$VMEM" -M "$CC"
+  echo "$(date_time) INFO: 2q -t "$threads" -v "$VMEM""
+fi
+
+node="$(qstatx | grep "$qsub_dir")"
+
+echo $node
+
+submission_file="$qsub_path/$COMMANDS2SUBMIT"
+
+echo "$(date_time) INFO: $submission_file"
+
+qsub_command=$(cat $submission_file)
+
+echo "$(date_time) INFO: $qsub_command"
+
+#wait for the fastq directory to be created
+until [ -d $fastq_path ]; do 
+  echo "$(date_time) *********** DO NOT PRESS CTRL-C! **************"
+  echo "$(date_time) Waiting 60 seconds for creation of $fastq_path."
+  sleep 60 ; 
+done ; 
+
+echo "$(date_time) INFO: Writing config files"
+
+#write a file containing bcl_path to the fastq directory
+echo $bcl_path >> $fastq_path/$BCL_PATH_FILE
+
+#copy samplesheet to fastq directory
+cp $samplesheet_path $fastq_path/$SAMPLESHEET_NAME
+
+#write bcl2fastq_command_line to BCL and Unaligned directory
+echo "$bcl2fastq_command_line" >> $fastq_path/$qsub_dir-$FASTQ_COMMAND_FILE
+echo "$bcl2fastq_command_line" >> $bcl_path/$qsub_dir-$FASTQ_COMMAND_FILE
+
+#copy xml files to fastq directory
+[ -f $bcl_path/RunInfo.xml ] && cp $bcl_path/RunInfo.xml $fastq_path/RunInfo.xml
+[ -f $bcl_path/RunParameters.xml ] && cp $bcl_path/RunParameters.xml $fastq_path/RunParameters.xml
+[ -f $bcl_path/runParameters.xml ] && cp $bcl_path/runParameters.xml $fastq_path/runParameters.xml 
+
+#node=$(qstatx | grep "${qsub_dir:0:10}")
+#node=$(qstatx | grep "$qsub_dir")
+
+#write a file containing the qsub node to the fastq dir
+echo "$node" > $fastq_path/"$qsub_dir"-qstat.txt
+echo "$node" > $bcl_path/"$qsub_dir"-qstat.txt
+
+#write file containing qsub script to fastq dir
+echo "$qsub_command" >$fastq_path/"$qsub_dir"-qsub.txt
+echo "$qsub_command" >$bcl_path/"$qsub_dir"-qsub.txt
+
+echo "$(date_time) INFO: Demux Started. Sending notification"
+
+{
+  echo -e "Demux Started.\n" 
+  echo -e "Command-line invocation:" ; \
+  echo -e "$bcl2fastq_command_line\n" ; \
+  echo -e "SGE invocation:" ; \
+  echo -e "$qsub_command\n" ; \
+  echo -e "jobnumber:" ; \
+  echo -e "$node"
+} | mailx -s "$bcl_path" -c $CC "$RECIPIENT"
+
+#
+# loop until demux completes by
+# checking log for successful completion
+
+
+until grep -Eq "$STOPSTR10X|$STOPSTR" $log_path
+do
+    sleep $sleeptime
+done
+
+log_message=$(grep -E "$STOPSTR10X|$STOPSTR" $log_path)
+
+if echo $log_message | grep -q $COMPLETESTR ; then
+
+  echo "$log_message"
+
+  echo "$(date_time) INFO: Sending demux completion notification."
+
+  demux-completion-notification -f $fastq_path
+
+  #prepare for versity rsync
+  echo "$(date_time) INFO: Making versity qsub directory: $versity_qsub_path"
+
+  mkdir $versity_qsub_path
+
+  cd $versity_qsub_path
+
+  #write rsync_command_line to commands script file
+  echo "$rsync_command_line" >> $versity_qsub_path/$QSUB_COMMANDS_SCRIPT
+
+  echo "$(date_time) INFO: Submitting versity rsync to the queue."
+
+  echo "$(date_time) INFO: $(echo $rsync_command_line)"
+
+  ls -l "$QUEUECONFIG"
+
+  2q -c $QUEUECONFIG -t "1" -v "2G"
+
+  node="$(qstatx | grep "$versity_qsub_dir")"
+
+  echo $node
+
+  versity_submission_file="$versity_qsub_path/$COMMANDS2SUBMIT"
+
+  versity_qsub_command=$(cat $versity_submission_file)
+
+  echo "$(date_time) INFO: Versity rsync Started. Sending notification"
+
+  {
+    echo -e "Rsyncing fastqs to versity..\n" 
+    echo -e "Command-line invocation:" ; \
+    echo -e "$rsync_command_line\n" ; \
+    echo -e "SGE invocation:" ; \
+    echo -e "$versity_qsub_command\n" ; \
+    echo -e "jobnumber:" ; \
+    echo -e "$node"
+  } | mailx -s "$bcl_path" -c $CC "$RECIPIENT"
+
+else
+
+  echo "$(date_time) INFO: An error occured."
+
+  echo "$(date_time) INFO: $log_message"
+
+fi
+
+
+
+
+exit 0
+

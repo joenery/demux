@@ -6,7 +6,8 @@
 #It must be invoked in the run folder
 #
 #The fastqs will be written to a directory in the 
-#OUTPUT_PARENT directory, which is defined below. 
+#OUTPUT_PARENT directory (found in demux-constants), 
+#which is defined below. 
 #It is assigned the directory name of the run folder 
 #with a timestamp suffix.
 #
@@ -21,23 +22,34 @@ timestamp="$(date "+%y%m%d%H%M%S")"
 run_path="$(pwd)"
 run_name="$(basename $run_path)"
 run_name_ts="${run_name}_$timestamp"
-output_path="$OUTPUT_PARENT/$run_name_ts"
+#see demux-constants for OUTPUT_PARENT definition
+#output_path="$OUTPUT_PARENT/$run_name_ts"
+#interop_path="$OUTPUT_PARENT/InterOp"
 log_name="$run_name_ts.txt"
 log_path="$LOG_PARENT/$log_name"
 
+##
+## 210630
+## added miseq specific output path
+##
+##
 instrument=$(echo $run_name | cut -f2 -d_)
 if [ "$instrument" = $MISEQ_STRING ] ; then
   flowcell="$(echo $run_name | awk -F- '{print $NF}')"
+  output_path="$MISEQ_OUTPUT_PARENT/$run_name_ts"
+  interop_path="$MISEQ_OUTPUT_PARENT/InterOp"
 else
   flowcell="$(echo $run_name | awk -F_ '{print $NF}')"
   flowcell="$(echo ${flowcell:1})"
+  output_path="$OUTPUT_PARENT/$run_name_ts"
+  interop_path="$OUTPUT_PARENT/InterOp" 
 fi
 
 flowcell_ts="${flowcell}_$timestamp"
 
-proc_threads=4
-read_threads=4
-write_threads=4
+proc_threads=1
+read_threads=1
+write_threads=1
 
 usage() {
 echo "Usage: demux-commandline -s SampleSheet.csv"
@@ -52,10 +64,14 @@ echo "            a: cellranger-atac"
 echo "            c: cellranger"
 echo "            d: cellranger-dna"
 echo "            eg, \"-ma\" or \"-m a\" for cellranger-atac"
+echo "-b  bcl2fastq for 10x. options:"
+echo "            2: v2 kit"
+echo "            3: v3 kit"
+
 echo "-h	this help message"
 }
 
-while getopts ":s:t:r:w:O:m:h" opt; do
+while getopts ":s:t:r:w:O:m:b:h" opt; do
   case $opt in
     s) 
       samplesheet_arg=$OPTARG
@@ -74,6 +90,23 @@ while getopts ":s:t:r:w:O:m:h" opt; do
       ;;
     m)
       mkfastq=$OPTARG
+      ;;
+    b)
+      bcl2fastq410x=$OPTARG
+      case $bcl2fastq410x in
+      1) basemask="Y28N*,I8N*,Y98N*" ;;
+      2) basemask="Y26N*,I8N*,N*,Y98N*" ;;
+      3) basemask="Y28N*,I8N*,N*,Y98N*" ;;
+      4) basemask="Y28N*,I10N*,I10N*,Y98N*" ;;
+      *)
+        echo "Invalid option for -b: -$bcl2fastq410x"
+        echo "Valid options are:"
+        echo "2: v2 kit"
+        echo "3: v3 kit"
+        echo "4: TT kit"
+        exit 1
+        ;;
+      esac
       ;;
     h) 
       usage
@@ -148,6 +181,25 @@ if [ ! -z ${mkfastq+x} ]; then
     --id $flowcell_ts \
     $bclopts \
     &> $log_path" 
+elif [ ! -z ${bcl2fastq410x+x} ]; then
+  bcl2fastq_command_line="nohup bcl2fastq \
+    -R "${run_path}" \
+    --sample-sheet ${samplesheet_path} \
+    -o "${output_path}" \
+    -p "${proc_threads}" \
+    -r "${read_threads}" \
+    -w "${write_threads}" \
+    --use-bases-mask=${basemask} \
+    --create-fastq-for-index-reads \
+    --minimum-trimmed-read-length=8 \
+    --mask-short-adapter-reads=8 \
+    --ignore-missing-positions \
+    --ignore-missing-controls \
+    --ignore-missing-filter \
+    --ignore-missing-bcls \
+    --interop-dir="${interop_path}" \
+    "${bclopts}" \
+    &> "${log_path}""
 else 
   bcl2fastq_command_line="nohup bcl2fastq \
     -R $run_path \

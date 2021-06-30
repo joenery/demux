@@ -1,0 +1,39 @@
+#!/bin/bash
+#
+#Must be run from an Illumina run directory
+#
+
+#$1 argument is for basemask
+
+
+#basemasks for 10x
+#      1) basemask="Y28N*,I8N*,Y98N*" ;;
+#      2) basemask="Y26N*,I8N*,N*,Y98N*" ;;
+#      3) basemask="Y28N*,I8N*,N*,Y98N*" ;;
+#      4) basemask="Y28N*,I10N*,I10N*,Y98N*" ;;
+
+source "/gale/netapp/home/seq/bin/demux/date-time"
+
+run_path="$(pwd)"
+run_id="$(basename $run_path)"
+
+RTACOMPLETE=./RTAComplete.txt
+WAITTIME=1m
+QLOG=/gale/netapp/seq2/illumina_runs/.qlog
+
+echo "$(date_time) Waiting for $RTACOMPLETE to be generated..."
+until [ -f $RTACOMPLETE ]
+do
+     sleep $WAITTIME
+done
+echo "$(date_time) $RTACOMPLETE detected"
+
+if [[ -z "${1}" ]]; then
+  #echo "$(date_time) Running: demux-run &> $QLOG/$run_id.txt"
+  demux-run &> $QLOG/$run_id.txt
+else
+  #echo "$(date_time) Running: demux-run -b $1 &> $QLOG/$run_id.txt"
+  demux-run -b $1 &> $QLOG/$run_id.txt
+fi
+
+exit

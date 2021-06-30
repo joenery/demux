@@ -1,0 +1,51 @@
+#!/bin/bash
+#
+#input 1: path to bcl config file
+#input 2: qc config file
+
+bcl_config="${1}"
+qc_config="${2}"
+
+echo "Sourcing bcl_config"
+source "${bcl_config}"
+
+#constants
+RECIPIENT="jnery@salk.edu"
+MESSAGE="Please check the MappingSummary.html: "
+MESSAGE2="Please advise on whether to proceed with the NovaSeq run and if the pool needs to be adjusted. Thank you!"
+MAPPING_SUMMARY="stats/MappingSummary.html"
+QSUB="snakemake/qsub/qsub.sh"
+FASTQ_WILDCARD="*fastq.gz"
+
+#source qc configuration file in run directory
+echo "Sourcing ${qc_config}"
+source "${qc_config}"
+
+echo "The mapping config is: $mapping_config"
+
+#paths
+in_path="${fastq_path}/${project_id}"
+fastq_files="${in_path}/${FASTQ_WILDCARD}"
+qc_path="${out_drive}/${fastq_dir}/QC/${project_id}"
+qsub_path="${qc_path}/${QSUB}"
+summary_path="${qc_path}/${MAPPING_SUMMARY}"
+
+echo "The input directory is: ${in_path}"
+echo "The output direcotry is: ${qc_path}"
+echo "Demultiplexing $fastq_files"
+
+yap demultiplex --fastq_pattern "${fastq_files}" --output_dir "${qc_path}" --config_path "${mapping_config}" --cpu 16
+
+sed -i 's/110/60/' "${qsub_path}"
+
+bash "${qsub_path}"
+
+yap summary --output_dir "${qc_path}"
+
+ls "${summary_path}" && \
+
+mailx -s "MappingSummary" -r "${RECIPIENT}" "${trello}" <<< "${mentions} ${MESSAGE} ${summary_path} ${MESSAGE2}" 
+
+#mailx -s "${qc_path}" -r "${RECIPIENT}" "${RECIPIENT}" <<< "MappingSummary not found ${qc_path}"
+
+

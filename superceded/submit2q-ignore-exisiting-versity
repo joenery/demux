@@ -19,83 +19,81 @@ submit2q () {
   qsubdir="$3"
   dir2chk="$4" #tar or versity paths
   dirname="$5" 
-  configuration="$6"
-  prefix=$(echo $qsubdir | awk -F - '{print $1}')
 
-#  if echo $commandline2submit | grep -q rsync ; then
-#    echo "checking if submission is for rsync"
-#    prefix="versity"
-#    sge_threads=1
-#    sge_vmem=2G
-#    status_file="rsynced"
-
-#  elif echo $commandline2submit | grep -q upload ; then
-#    echo "checking if submission is for upload"
-#    prefix="oracle"
-#    sge_threads=15
-#    sge_vmem=1G
-#    status_file="uploaded"
-
-#  fi
-
-
- 
-  ERROR_MESSAGE="$(date_time) ERROR: An attempt to submit this job has been detected. Please check:"
-
-  if  [ "$prefix" = "versity" ] ; then
+  if echo $commandline2submit | grep -q rsync ; then
     sge_threads=1
     sge_vmem=2G
     status_file="rsynced"
-    completed="$RSYNCED"
-    in_progress="$RSYNCING"
-  elif [ "$prefix" = "oracle" ] ; then
-    prefix="oracle"
+
+  elif echo $commandline2submit | grep -q upload ; then
     sge_threads=15
     sge_vmem=1G
     status_file="uploaded"
-    completed="$UPLOADED"
-    in_progress="$UPLOADING"
-  fi
 
-  #check if backup is completed or in progress
-  if [[ $(grep -w $(echo $dirname) $completed) || \
-    $(grep -w $(echo $dirname) $in_progress) ]] ; then
-    
+  fi
+ 
+  ERROR_MESSAGE="$(date_time) ERROR: A previous attempt to submit this job has been detected. Please check:"
+
+  #check if the job was previously submitted to the queue  
+  if [ -d $qsubpath ] ; then
     echo "$ERROR_MESSAGE"
-    echo "$completed or $in_progress"
-  
-  #submit job to queue
+    echo "$qsubpath"
+    echo
+
+  #check if the directory exists in versity or as a tar
+#  elif [[ ! -z $dir2chk &&  -d "$dir2chk" ]] ; then
+#    echo "Directory exists."
+#    echo "$ERROR_MESSAGE"
+#    echo "$dir2chk"
+#    echo 
+ 
+  #check rsync status
+  elif [[ $(grep $(echo $dirname) $RSYNCED) && $(echo $qsubdir | grep versity) ]] ; then
+    echo "This directory has been rsynced."
+    echo "$ERROR_MESSAGE"
+    echo "$RSYNCED"
+    echo
+
+  #check upload status
+
+  elif [[ $(grep $(echo $dirname) $UPLOADED) && $(echo $qsubdir | grep oracle) ]] ; then
+    echo "This directory has been uploaded."
+    echo "$ERROR_MESSAGE"
+    echo "$UPLOADED"
+    echo
+
   else
     echo "$(date_time) INFO: $dir2chk does not exist"
+    echo
     echo "$(date_time) INFO: $qsubpath does not exist"
+    echo
     echo "$(date_time) INFO: Submitting job."
 
     #prepare submission dir
     echo "$(date_time) INFO: Making qsub directory: $qsubpath"
-    [ -d $qsubpath ] || mkdir $qsubpath
+    mkdir $qsubpath
     cd $qsubpath
-  
+    
     #write commandline2submit to commands script file
     echo "$commandline2submit" >> $qsubpath/$QSUB_COMMANDS_SCRIPT
-  
-    echo "$(date_time) INFO: Submitting to the SGE."
-  
+    
+    echo "$(date_time) INFO: Submitting to the queue."
+    
     echo "$(date_time) INFO: $(echo $commandline2submit)"
-  
-    2q -p $prefix -c $BACKUPQUEUECONFIG -t $sge_threads -v $sge_vmem
-
-    sleep 30
-  
+    
+    ls -l "$QUEUECONFIG"
+    
+    2q -c $QUEUECONFIG -t $sge_threads -v $sge_vmem
+    
     jobid="$(qstatx | grep "$qsubdir" | awk '{print $1}')"
-  
+    
     echo $node
-  
+    
     q_submission_file="$qsubpath/$COMMANDS2SUBMIT"
-  
+    
     qsub_command_string=$(cat $q_submission_file)
-  
+    
     echo "$(date_time) INFO: Job submittted. Sending notification email."
-
     
     {
     echo -e "Command-line invocation:" ; \
@@ -105,10 +103,9 @@ submit2q () {
     echo -e "jobnumber:" ; \
     echo -e "$jobid\n" ; \
     echo -e "SGE logs:" ; \
-    echo -e "$qsubpath\n" ; \
-    echo -e "backup configuration:" ; \
-    echo -e "$configuration"
-    } | mailx -s "$dirname"  "$RECIPIENT"
-        
+    echo -e "$qsubpath"
+    } | mailx -s "$bcl_path" -c $CC "$RECIPIENT"
+  
   fi
+  
 }

@@ -1,3 +1,25 @@
 function date_time(){
   echo $(date "+%Y-%m-%d %H:%M:%S");
 }
+
+function idate(){
+  echo $(date "+%y%m%d");
+}
+
+function idatex(){
+  echo $(date "+%y%m%d%H%M%S");
+}
+
+function strip_m(){
+  echo $(tr -d '\r'  <<< "$1");
+}
+
+function while_incomplete(){
+  file=./RTAComplete.txt
+  mkdir RTAComplete
+  dirname=RTAComplete
+while [ ! -f "$file" ]
+do
+    inotifywait -qqt 2 -e create -e moved_to "$(dirname $file)"
+done
+}

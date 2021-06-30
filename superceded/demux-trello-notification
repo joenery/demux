@@ -37,9 +37,9 @@ stats="$bcl_path/Stats/Stats.json"
 
 [ -f $runparameters ] || runparameters="$bcl_path/RunParameters.xml"
 
-projects="$(lanebarcode-projects -l $lanebarcode)"
+#projects="$(lanebarcode-projects -l $lanebarcode)"
 
-samples="$(lanebarcode-samples -l $lanebarcode)"
+#samples="$(lanebarcode-samples -l $lanebarcode)"
 
 qsub_command="$(cat $fastq_path/$QSUB_FILE)"
 
@@ -60,31 +60,9 @@ maxvmem=$(grep "maxvmem" $jobmetrics)
 
 echo $bcl2fastq_commandline
 
-{
-  echo -e "Demux completed in $elapsed.\n" ; \
-  echo -e "Path to fastq:" ; \
-  echo -e "$fastq_path\n" ; \
-  echo -e "Samples:" ; \
-  echo -e "$samples\n" ; \
-  echo -e "Projects:" ; \
-  echo -e "$projects\n" ; \
-  echo -e "Path to bcl:" ; \
-  echo -e "$bcl_path\n" ;\
-  echo -e "Command-line invocation:" ; \
-  echo -e "$bcl2fastq_commandline\n" ; \
-  echo -e "SGE invocation:" ; \
-  echo -e "$qsub_command\n" ; \
-  echo -e "$jobnumber" ;\
-  echo -e "$start_time" ;\
-  echo -e "$end_time" ;\
-  echo -e "$slots" ;\
-  echo -e "$mem" ;\
-  echo -e "$maxvmem" ;\
-  echo -e
-} | mailx -s "$bcl_dir" -a "$lanebarcode" -a "$samplesheet_path" -a "$runinfo" -a "$runparameters" -c "$cc" -r "$RECIPIENT" "$RECIPIENT"
-
-
 { 
-  echo -e "Path to fastq:" ; \
+  echo -e " Path to fastq:" ; \
   echo -e "$fastq_path\n" 
-} | mailx -s "$mentions" -a "$lanebarcode" -r "$RECIPIENT" "$trello" 
+} | mailx -s "Thanks $mentions" -r "$RECIPIENT" "$trello" 
+
+#| mailx -s "$mentions" -a "$lanebarcode" -r "$RECIPIENT" "$trello"

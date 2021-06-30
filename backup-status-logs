@@ -2,40 +2,32 @@
 #
 source "/gale/netapp/home/seq/bin/demux/demux-constants"
 
-#RSYNCED="/gale/netapp/home/seq/.status/rsynced"
-#UPLOADED="/gale/netapp/home/seq/.status/uploaded"
-#ARCHIVED="/gale/netapp/home/seq/.status/archived"
-
-#ARCHIVED_D4="/gale/oberon/data4/.archived"
-
-#RSYNCED_R2="/gale/raidix/rdx-2/illumina_runs/.status/rsynced"
-#UPLOADED_R2="/gale/raidix/rdx-2/illumina_runs/.status/uploaded"
-#ARCHIVED_R2="/gale/raidix/rdx-2/illumina_runs/.status/archived"
-
-#RSYNCED_S2="/gale/netapp/seq2/illumina_runs/.status/rsynced"
-#UPLOADED_S2="/gale/netapp/seq2/illumina_runs/.status/uploaded"
-#ARCHIVED_S2="/gale/netapp/seq2/illumina_runs/.status/archived"
-
 timestamp="$(date "+%y%m%d%H%M%S")"
 TS=$timestamp
 
 echo "Backing up rsynced log to $RSYNCED_R2"-"$TS"
 cp $RSYNCED $RSYNCED_R2"-"$TS
 
-echo "Backing up rsynced log to $RSYNCED_HOME"-"$TS"
-cp $RSYNCED $RSYNCED_HOME"-"$TS
+echo "Backing up rsynced log to $RSYNCED_S2"-"$TS"
+cp $RSYNCED $RSYNCED_S2"-"$TS
 
 echo "Backing up uploaded log to $UPLOADED_R2"-"$TS"
 cp $UPLOADED $UPLOADED_R2"-"$TS
 
-echo "Backing up uploaded log to $UPLOADED_HOME"-"$TS"
-cp $UPLOADED $UPLOADED_HOME"-"$TS
+echo "Backing up uploaded log to $UPLOADED_S2"-"$TS"
+cp $UPLOADED $UPLOADED_S2"-"$TS
 
 echo "Backing up archived log to $ARCHIVED_R2"-"$TS"
 cp $ARCHIVED $ARCHIVED_R2"-"$TS
 
-echo "Backing up archived log to $ARCHIVED_HOME"-"$TS"
-cp $ARCHIVED $ARCHIVED_HOME"-"$TS
+echo "Backing up archived log to $ARCHIVED_S2"-"$TS"
+cp $ARCHIVED $ARCHIVED_S2"-"$TS
+
+echo "Backing up deeparchived log to $DEEPARCHIVED_R2"-"$TS"
+cp $DEEPARCHIVED $DEEPARCHIVED_R2"-"$TS
+
+echo "Backing up deeparchived log to $DEEPARCHIVED_S2"-"$TS"
+cp $DEEPARCHIVED $DEEPARCHIVED_S2"-"$TS
 
 #echo "Updating archived log with archived log from sculpin"
 #sync-archived-log

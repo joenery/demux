@@ -1,0 +1,21 @@
+#!/bin/bash
+#
+source "/gale/netapp/home/seq/bin/demux/demux-constants"
+
+#RSYNCED="/gale/netapp/seq2/illumina_runs/.status/rsynced"
+#UPLOADED="/gale/netapp/seq2/illumina_runs/.status/uploaded"
+#ARCHIVED="/gale/netapp/seq2/illumina_runs/.status/archived"
+
+#ARCHIVED_D4="/gale/oberon/data4/.archived"
+
+#RSYNCED_R2="/gale/raidix/rdx-2/illumina_runs/.status/rsynced"
+#UPLOADED_R2="/gale/raidix/rdx-2/illumina_runs/.status/uploaded"
+#ARCHIVED_R2="/gale/raidix/rdx-2/illumina_runs/.status/archived"
+
+#RSYNCED_HOME="/gale/netapp/home/seq/.status/rsynced"
+#UPLOADED_HOME="/gale/netapp/home/seq/.status/uploaded"
+#ARCHIVED_HOME="/gale/netapp/home/seq/.status/archived"
+
+#for i in * ; do grep -q -w "$i" $ARCHIVED && grep -q -w "$i" $RSYNCED && grep -q -w "$i" $UPLOADED && echo "$i" ; done
+
+for i in * ; do grep -q -w "$i" $ARCHIVED && grep -q -w "$i" $RSYNCED && grep -q -w "$i" $UPLOADED && echo "$i" ; done

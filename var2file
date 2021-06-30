@@ -8,7 +8,7 @@ var2file () {
 #output: file 
 varname=$1 
 config=$2
-echo "$varname=\"${!varname}\"" >> $config
+echo "$varname=\"${!varname}\"" >> "$config"
 #https://stackoverflow.com/questions/10990436/bash-concatenating-2-strings-to-reference-a-3rd-variable
 }
 

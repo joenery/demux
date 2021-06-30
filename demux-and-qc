@@ -1,0 +1,29 @@
+#!/bin/bash
+#
+#Must be run from an Illumina run directory
+#wait for sequencing to complete, then run bcl2fastq and qc
+
+source "/gale/netapp/home/seq/bin/demux/date-time"
+
+run_path=`pwd`
+run_id="$(basename $run_path)"
+
+RTACOMPLETE=./RTAComplete.txt
+WAITTIME=1m
+QLOG=/gale/netapp/seq2/illumina_runs/.qlog
+
+#wait4rtacomplete
+
+commandline=`cat ${run_path}/*command*`
+#echo "The command line is: ${commandline}"
+
+bcl_config=`get-config "${commandline}"`
+
+echo "Starting QC pipeline"
+
+for i in `ls "${run_path}" | grep qc` ; do qc-run ${bcl_config} $i ; done
+
+#qc-run ${bcl_config}
+
+
+exit
